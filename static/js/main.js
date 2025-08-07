@@ -1,0 +1,117 @@
+import { fetchLatestVideos, getVideoUrl } from './api_base.js'
+import { updateScore } from './api_modify.js'
+import { searchVideos } from './api_search.js'
+
+const { createApp, reactive, onMounted, computed, ref } = Vue
+
+createApp({
+    setup() {
+        const state = reactive({
+            videos: [],
+            page: 1,
+            pageSize: 10,
+        })
+        const currentIndex = ref(0)
+        const showDetail = ref(false)
+        const showSearch = ref(false)
+        const searchKeyword = ref('')
+        const searchScore = ref(0)
+        let touchStartY = 0
+        let touchActive = false
+
+        const currentVideo = computed(() => state.videos[currentIndex.value] || {})
+
+        async function loadVideos() {
+            state.videos = await fetchLatestVideos(state.page, state.pageSize)
+            currentIndex.value = 0
+        }
+
+        function prevVideo() {
+            if (currentIndex.value > 0) {
+                currentIndex.value--
+                autoPlayVideo()
+            }
+        }
+
+        function nextVideo() {
+            if (currentIndex.value < state.videos.length - 1) {
+                currentIndex.value++
+                autoPlayVideo()
+            }
+        }
+
+        function toggleDetail() {
+            showDetail.value = !showDetail.value
+        }
+
+        function handleTouchStart(e) {
+            const videoEl = document.elementFromPoint(
+                e.touches[0].clientX,
+                e.touches[0].clientY
+            )
+            if (videoEl && videoEl.tagName === 'VIDEO') {
+                touchActive = true
+                touchStartY = e.touches[0].clientY
+            } else {
+                touchActive = false
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!touchActive) return
+            const deltaY = e.changedTouches[0].clientY - touchStartY
+            if (Math.abs(deltaY) > 50) {
+                if (deltaY < 0) nextVideo()
+                else prevVideo()
+            }
+            touchActive = false
+        }
+
+        function autoPlayVideo() {
+            setTimeout(() => {
+                const videoEl = document.querySelector('video')
+                if (videoEl) videoEl.play()
+            }, 800)
+        }
+
+        async function updateScoreHandler(newScore) {
+            if (!currentVideo.value.id) return;
+            await updateScore(currentVideo.value.id, newScore)
+            currentVideo.value.score = newScore
+        }
+
+        async function doSearch() {
+            state.videos = await searchVideos({
+                keyword: searchKeyword.value,
+                score: searchScore.value,
+                page: state.page
+            })
+            currentIndex.value = 0
+            showSearch.value = false
+        }
+
+        onMounted(() => {
+            loadVideos()
+        })
+
+        return {
+            state,
+            currentIndex,
+            currentVideo,
+            showDetail,
+            getVideoUrl,
+            prevVideo,
+            nextVideo,
+            toggleDetail,
+            handleTouchStart,
+            handleTouchEnd,
+            updateScore: updateScoreHandler,
+            showSearch,
+            searchKeyword,
+            searchScore,
+            doSearch
+        }
+    }
+    }).use(vant).mount('#app')
+
+ 

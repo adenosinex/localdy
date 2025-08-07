@@ -4,29 +4,17 @@
     <meta charset="UTF-8">
     <title>短视频浏览项目</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@4/lib/index.css">
-    <script src="https://cdn.jsdelivr.net/npm/vant@4/lib/vant.min.js"></script>
-    <style>
-        html, body { height: 100%; margin: 0; padding: 0; background: #000; }
-        #app { height: 100vh; width: 100vw; overflow: hidden; background: #000; }
-        .main-video { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .video-box { width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; }
-        .video-title { color: #fff; font-size: 22px; font-weight: bold; margin-bottom: 10px; text-align: center; cursor: pointer; }
-        video { width: 100vw; height: 60vh; object-fit: cover; background: #000; border-radius: 0; }
-        .van-popup { background: #fff; }
-        .video-actions { position: absolute; bottom: 30px; left: 0; width: 100vw; display: flex; justify-content: center; gap: 20px; }
-        @media (max-width: 600px) {
-            .video-title { font-size: 18px; }
-            video { height: 55vh; }
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 {% raw %}
 <div id="app">
     <div class="main-video" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
+        <!-- 搜索按钮 -->
+        <div style="position:absolute;top:18px;right:18px;z-index:10;">
+            <van-button type="primary" icon="search" size="small" @click="showSearch = true">搜索</van-button>
+        </div>
         <div class="video-box" v-if="state.videos.length">
             <div class="video-title" @click="toggleDetail">{{ currentVideo.filename }}</div>
             <video
@@ -54,115 +42,24 @@
             </van-popup>
         </div>
         <div v-else style="color:#fff;margin-top:40px;">暂无视频</div>
+        <!-- 搜索弹窗 -->
+        <van-popup v-model:show="showSearch" position="top" round style="width:90vw;">
+            <div style="padding:20px;">
+                <h4>搜索与筛选</h4>
+                <van-field v-model="searchKeyword" label="关键词" placeholder="输入关键词" />
+                <div style="margin:10px 0;">
+                    <span>评分筛选：</span>
+                    <van-rate v-model="searchScore" />
+                </div>
+                <van-button type="primary" block @click="doSearch">确认搜索</van-button>
+            </div>
+        </van-popup>
     </div>
 </div>
 {% endraw %}
-<script>
-const { createApp, reactive, onMounted, computed, ref } = Vue
-
-createApp({
-    setup() {
-        const state = reactive({
-            videos: [],
-            page: 1,
-            pageSize: 10,
-        })
-        const currentIndex = ref(0)
-        const showDetail = ref(false)
-        let touchStartY = 0
-        let touchActive = false
-
-        const currentVideo = computed(() => state.videos[currentIndex.value] || {})
-
-        function getVideoUrl(id) {
-            return `/videos/${id}/stream`
-        }
-
-        async function fetchLatestVideos() {
-            const res = await axios.get('/videos', {
-                params: { latest: 50, page: state.page }
-            })
-            state.videos = res.data
-            currentIndex.value = 0
-        }
-
-        function prevVideo() {
-            if (currentIndex.value > 0) {
-                currentIndex.value--
-                autoPlayVideo()
-            }
-        }
-
-        function nextVideo() {
-            if (currentIndex.value < state.videos.length - 1) {
-                currentIndex.value++
-                autoPlayVideo()
-            }
-        }
-
-        function toggleDetail() {
-            showDetail.value = !showDetail.value
-        }
-
-        function handleTouchStart(e) {
-            // 只有视频元素在最前端时才允许滑动切换
-            const videoEl = document.elementFromPoint(
-                e.touches[0].clientX,
-                e.touches[0].clientY
-            )
-            if (videoEl && videoEl.tagName === 'VIDEO') {
-                touchActive = true
-                touchStartY = e.touches[0].clientY
-            } else {
-                touchActive = false
-            }
-        }
-
-        function handleTouchEnd(e) {
-            if (!touchActive) return
-            const deltaY = e.changedTouches[0].clientY - touchStartY
-            if (Math.abs(deltaY) > 50) {
-                if (deltaY < 0) nextVideo()
-                else prevVideo()
-            }
-            touchActive = false
-        }
-
-        function autoPlayVideo() {
-            setTimeout(() => {
-                const videoEl = document.querySelector('video')
-                if (videoEl) videoEl.play()
-            }, 800)
-        }
-
-        async function updateScore(newScore) {
-            if (!currentVideo.value.id) return;
-            await axios.post('/videos/update_score', {
-                id: currentVideo.value.id,
-                score: newScore
-            });
-            currentVideo.value.score = newScore;
-        }
-
-        onMounted(() => {
-            fetchLatestVideos()
-        })
-
-        return {
-            state,
-            currentIndex,
-            currentVideo,
-            showDetail,
-            getVideoUrl,
-            prevVideo,
-            nextVideo,
-            toggleDetail,
-            handleTouchStart,
-            handleTouchEnd,
-            updateScore
-        }
-    }
-}).use(vant).mount('#app')
-</script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vant@4/lib/vant.min.js"></script>
+<script src="/static/js/main.js" type="module"></script>
 </body>
 </html>
