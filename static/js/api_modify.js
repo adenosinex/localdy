@@ -2,6 +2,6 @@
 export async function updateScore(videoId, score) {
     await axios.post('/videos/update_score', {
         id: videoId,
-        score: score
+        score: score  
     })
 }

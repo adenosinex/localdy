@@ -4,6 +4,17 @@ import { searchVideos } from './api_search.js'
 
 const { createApp, reactive, onMounted, computed, ref } = Vue
 
+async function getTotalPages(pageSize, searchKeyword = '', searchScore = 0) {
+    // 获取总视频数
+    const params = []
+    if (searchKeyword) params.push(`search=${encodeURIComponent(searchKeyword)}`)
+    if (searchScore && searchScore > 0) params.push(`score=${searchScore}`)
+    const url = `/videos/count${params.length ? '?' + params.join('&') : ''}`
+    const resp = await axios.get(url)
+    const total = resp.data.total || 0
+    return Math.max(1, Math.ceil(total / pageSize))
+}
+
 createApp({
     setup() {
         const state = reactive({
@@ -22,13 +33,20 @@ createApp({
         const currentVideo = computed(() => state.videos[currentIndex.value] || {})
 
         async function loadVideos(append = false) {
-            const newVideos = await fetchLatestVideos(state.page, state.pageSize,state.searchKeyword || '')
+            const newVideos = await fetchLatestVideos(state )
             if (append) {
                 state.videos.push(...newVideos)
             } else {
                 state.videos = newVideos
                 currentIndex.value = 0
             }
+        }
+
+        async function initialLoad() {
+            // 获取总页数，随机选择一个页码
+            const totalPages = await getTotalPages(state.pageSize)
+            state.page = Math.floor(Math.random() * totalPages) + 1
+            await loadVideos(false)
         }
 
         function prevVideo() {
@@ -115,7 +133,7 @@ createApp({
         }
 
         onMounted(() => {
-            loadVideos()
+            initialLoad()
         })
 
         return {

@@ -16,7 +16,7 @@ def add_video():
     detail = data.get('detail', '')
     tags = extract_tags(filename)
     session = Session()
-    video = Video(filename=filename, tags=','.join(tags), score=score, detail=detail)
+    video = Video(filename=filename,   score=score )
     session.add(video)
     session.commit()
     vid = video.id

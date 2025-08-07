@@ -26,9 +26,9 @@ def get_videos():
         for tag in tags.split(','):
             query = query.filter(Video.tags.like(f"%{tag}%"))
     if search:
-        query = query.filter(
-            (Video.filename.like(f"%{search}%")) | (Video.detail.like(f"%{search}%"))
-        )
+        keywords = search.strip().split()
+        for kw in keywords:
+            query = query.filter(Video.filename.like(f"%{kw}%"))
     query = query.order_by(Video.id.desc())
     if page_size:
         query = query.offset((page-1)*page_size).limit(page_size)
@@ -98,3 +98,28 @@ def stream_video_file(video_id):
         return abort(404, "视频文件不存在")
     # 以流式方式响应视频文件
     return send_file(video_path, mimetype='video/mp4', as_attachment=True)
+
+@bp_videos.route('/videos/count', methods=['GET'])
+def get_videos_count():
+    """
+    获取视频总数（用于前端分页和随机页）。
+    支持分数、标签、关键词筛选。
+    """
+    session = Session()
+    query = session.query(Video)
+    score = request.args.get('score')
+    search = request.args.get('search')
+    tags = request.args.get('tags')
+
+    if score:
+        query = query.filter(Video.score == int(score))
+    if tags:
+        for tag in tags.split(','):
+            query = query.filter(Video.tags.like(f"%{tag}%"))
+    if search:
+        keywords = search.strip().split()
+        for kw in keywords:
+            query = query.filter(Video.filename.like(f"%{kw}%"))
+    total = query.count()
+    session.close()
+    return jsonify({"total": total})

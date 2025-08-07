@@ -13,6 +13,20 @@ class Video(Base):
     score = Column(Integer, default=0)
     detail = Column(String, default='')
 
+def delete_video(video_id):
+    """
+    删除指定视频记录。
+    """
+    session = Session()
+    video = session.query(Video).filter(Video.id == video_id).first()
+    if video:
+        session.delete(video)
+        session.commit()
+        session.close()
+        return True
+    session.close()
+    return False
+
 def extract_tags(filename):
     """
     从文件名中提取标签（tags）。

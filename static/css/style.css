@@ -41,8 +41,8 @@ body {
 }
 
 video {
-    width: 100vw;
-    height: 60vh;
+   height: auto;
+        width: 44vh;
     object-fit: cover;
     background: #000;
     border-radius: 0;

@@ -108,5 +108,5 @@ def init_data_from_folder(root_folder):
 if __name__ == "__main__":
     # 修改为你的视频根目录路径
     # video_root = input("请输入视频根目录路径：")
-    video_root=r'\\Synology\home\sync od\dy-fastnas\3.重点用户'
+    video_root=r'\\Synology\home\sync od\dy-fastnas'
     init_data_from_folder(video_root)
