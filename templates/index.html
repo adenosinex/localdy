@@ -46,7 +46,7 @@
                     <p>文件名: {{ currentVideo.filename }}</p>
                     <p>标签: {{ currentVideo.tags }}</p>
                     <p>评分: 
-                        <van-rate v-model="currentVideo.score" readonly />
+                        <van-rate v-model="currentVideo.score" @change="updateScore" />
                     </p>
                     <p>分类: {{ currentVideo.detail }}</p>
                     <van-button type="primary" block :url="getVideoUrl(currentVideo.id)" download>下载</van-button>
@@ -122,6 +122,17 @@ createApp({
             }, 800)
         }
 
+        async function updateScore(newScore) {
+            if (!currentVideo.value.id) return;
+            // 提交评分到后端
+            await axios.post('/videos/update_score', {
+                id: currentVideo.value.id,
+                score: newScore
+            });
+            // 可选：刷新视频数据
+            currentVideo.value.score = newScore;
+        }
+
         onMounted(() => {
             fetchLatestVideos()
         })
@@ -136,7 +147,8 @@ createApp({
             nextVideo,
             toggleDetail,
             handleTouchStart,
-            handleTouchEnd
+            handleTouchEnd,
+            updateScore
         }
     }
 }).use(vant).mount('#app')

@@ -23,4 +23,19 @@ def add_video():
     session.close()
     return jsonify({"id": vid, "filename": filename, "tags": ','.join(tags), "score": score, "detail": detail})
 
+@bp_modify.route('/videos/update_score', methods=['POST'])
+def update_score():
+    data = request.json
+    video_id = data.get('id')
+    score = data.get('score')
+    session = Session()
+    video = session.query(Video).filter(Video.id == video_id).first()
+    if video:
+        video.score = score
+        session.commit()
+        session.close()
+        return jsonify({"success": True})
+    session.close()
+    return jsonify({"success": False, "msg": "视频不存在"}), 404
+
 # 可扩展PUT/DELETE等接口
