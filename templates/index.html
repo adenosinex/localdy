@@ -42,18 +42,26 @@
             </van-popup>
         </div>
         <div v-else style="color:#fff;margin-top:40px;">暂无视频</div>
-        <!-- 搜索弹窗 -->
-        <van-popup v-model:show="showSearch" position="top" round style="width:90vw;">
-            <div style="padding:20px;">
+        <!-- 搜索弹窗（原生实现） -->
+        <div v-if="showSearch" class="search-modal">
+            <div class="search-modal-content">
                 <h4>搜索与筛选</h4>
-                <van-field v-model="searchKeyword" label="关键词" placeholder="输入关键词" />
+                <input type="text" v-model="searchKeyword" placeholder="输入关键词" class="search-input" />
                 <div style="margin:10px 0;">
                     <span>评分筛选：</span>
-                    <van-rate v-model="searchScore" />
+                    <select v-model="searchScore" class="search-select">
+                        <option value="0">不限</option>
+                        <option value="1">1分</option>
+                        <option value="2">2分</option>
+                        <option value="3">3分</option>
+                        <option value="4">4分</option>
+                        <option value="5">5分</option>
+                    </select>
                 </div>
-                <van-button type="primary" block @click="doSearch">确认搜索</van-button>
+                <button class="search-btn-confirm" @click="doSearch">确认搜索</button>
+                <button class="search-btn-cancel" @click="showSearch=false">取消</button>
             </div>
-        </van-popup>
+        </div>
     </div>
 </div>
 {% endraw %}
