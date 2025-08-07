@@ -70,6 +70,7 @@ createApp({
         const currentIndex = ref(0)
         const showDetail = ref(false)
         let touchStartY = 0
+        let touchActive = false
 
         const currentVideo = computed(() => state.videos[currentIndex.value] || {})
 
@@ -104,15 +105,27 @@ createApp({
         }
 
         function handleTouchStart(e) {
-            touchStartY = e.touches[0].clientY
+            // 只有视频元素在最前端时才允许滑动切换
+            const videoEl = document.elementFromPoint(
+                e.touches[0].clientX,
+                e.touches[0].clientY
+            )
+            if (videoEl && videoEl.tagName === 'VIDEO') {
+                touchActive = true
+                touchStartY = e.touches[0].clientY
+            } else {
+                touchActive = false
+            }
         }
 
         function handleTouchEnd(e) {
+            if (!touchActive) return
             const deltaY = e.changedTouches[0].clientY - touchStartY
             if (Math.abs(deltaY) > 50) {
                 if (deltaY < 0) nextVideo()
                 else prevVideo()
             }
+            touchActive = false
         }
 
         function autoPlayVideo() {
@@ -124,12 +137,10 @@ createApp({
 
         async function updateScore(newScore) {
             if (!currentVideo.value.id) return;
-            // 提交评分到后端
             await axios.post('/videos/update_score', {
                 id: currentVideo.value.id,
                 score: newScore
             });
-            // 可选：刷新视频数据
             currentVideo.value.score = newScore;
         }
 
