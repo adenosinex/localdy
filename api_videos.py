@@ -13,10 +13,10 @@ def get_videos():
     session = Session()
     query = session.query(Video)
     page = int(request.args.get('page', 1))
-    page_size = int(request.args.get('page_size', 10))
+    page_size = int(request.args.get('page_size', 5))
     score = request.args.get('score')
-    tags = request.args.get('tags')
     search = request.args.get('search')
+    tags = request.args.get('tags')
     latest = request.args.get('latest')
     stream = request.args.get('stream', 'false').lower() == 'true'
 
@@ -30,10 +30,10 @@ def get_videos():
             (Video.filename.like(f"%{search}%")) | (Video.detail.like(f"%{search}%"))
         )
     query = query.order_by(Video.id.desc())
-    if latest:
-        query = query.limit(int(latest))
-    else:
+    if page_size:
         query = query.offset((page-1)*page_size).limit(page_size)
+    else:
+        query = query.limit(int(latest))
     videos = query.all()
     session.close()
 

@@ -22,7 +22,7 @@ createApp({
         const currentVideo = computed(() => state.videos[currentIndex.value] || {})
 
         async function loadVideos(append = false) {
-            const newVideos = await fetchLatestVideos(state.page, state.pageSize)
+            const newVideos = await fetchLatestVideos(state.page, state.pageSize,state.searchKeyword || '')
             if (append) {
                 state.videos.push(...newVideos)
             } else {
@@ -94,13 +94,18 @@ createApp({
         }
 
         async function doSearch() {
-            state.videos = await searchVideos({
-                keyword: searchKeyword.value,
-                score: searchScore.value,
-                page: state.page
-            })
+            state.searchKeyword = searchKeyword.value.trim()
+            state.searchScore = searchScore.value
+            state.page = 1
+            // state.videos = await searchVideos({
+            //     keyword: searchKeyword.value,
+            //     score: searchScore.value,
+            //     page: state.page
+            // })
             currentIndex.value = 0
             showSearch.value = false
+
+            loadVideos(false)
         }
 
         async function likeVideo(newScore=5) {

@@ -1,7 +1,7 @@
 // 基础信息获取相关
-export async function fetchLatestVideos(page = 1, pageSize = 10) {
+export async function fetchLatestVideos(page = 1, pageSize = 5,keyword='') {
     const res = await axios.get('/videos', {
-        params: { latest: 50, page, page_size: pageSize }
+        params: { latest: pageSize, page, page_size: pageSize, search : keyword }
     })
     return res.data
 }
