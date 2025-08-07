@@ -18,6 +18,7 @@ def init_data_from_folder(root_folder):
     id自增，detail为文件所在文件夹名（即类别）。
     """
     init_db()
+    cnt=0
     for dirpath, dirnames, filenames in os.walk(root_folder):
         folder_name = os.path.basename(dirpath)
         for fname in filenames:
@@ -27,7 +28,8 @@ def init_data_from_folder(root_folder):
             full_path = os.path.join(dirpath, fname)
             tags = extract_tags(fname)
             add_video_record(fname, tags, score=0, detail=full_path)
-
+            cnt += 1
+    print(f"数据初始化完成。共添加视频文件：{cnt}")
 if __name__ == "__main__":
     # 修改为你的视频根目录路径
     video_root = r"C:\\Users\\xin\\Documents\\codgit\\downfile-server\\links\\2025-08-06 auto"

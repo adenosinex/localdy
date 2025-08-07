@@ -21,14 +21,8 @@ def extract_tags(filename):
     - 其它标签为所有#后面的字符串（如#玛莎拉、#好久不见）。
     返回：标签列表（可能为空）。
     """
-    main_tag_match = re.search(r'(\S+)\s*#', filename)
-    tags = []
-    if main_tag_match:
-        tags.append(main_tag_match.group(1))
-    else:
-        parts = filename.split()
-        if parts:
-            tags.append(parts[-1])
+    main_tag_match = filename.split(' ')[0]
+    tags = [main_tag_match]
     tags += re.findall(r'#([\u4e00-\u9fa5\w]+)', filename)
     return tags
 
