@@ -103,6 +103,12 @@ createApp({
             showSearch.value = false
         }
 
+        async function likeVideo() {
+            if (!currentVideo.value.id) return;
+            await updateScore(currentVideo.value.id, 5);
+            currentVideo.value.score = 5;
+        }
+
         onMounted(() => {
             loadVideos()
         })
@@ -122,7 +128,8 @@ createApp({
             showSearch,
             searchKeyword,
             searchScore,
-            doSearch
+            doSearch,
+            likeVideo // 新增
         }
     }
     }).use(vant).mount('#app')
