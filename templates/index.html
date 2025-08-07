@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>短视频浏览项目</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@4/lib/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/vant@4/lib/vant.min.js"></script>
+    <style>
+        html, body { height: 100%; margin: 0; padding: 0; background: #000; }
+        #app { height: 100vh; width: 100vw; overflow: hidden; background: #000; }
+        .main-video { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .video-box { width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; }
+        .video-title { color: #fff; font-size: 22px; font-weight: bold; margin-bottom: 10px; text-align: center; cursor: pointer; }
+        video { width: 100vw; height: 60vh; object-fit: cover; background: #000; border-radius: 0; }
+        .van-popup { background: #fff; }
+        .video-actions { position: absolute; bottom: 30px; left: 0; width: 100vw; display: flex; justify-content: center; gap: 20px; }
+        @media (max-width: 600px) {
+            .video-title { font-size: 18px; }
+            video { height: 55vh; }
+        }
+    </style>
+</head>
+<body>
+{% raw %}
+<div id="app">
+    <div class="main-video" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
+        <div class="video-box" v-if="state.videos.length">
+            <div class="video-title" @click="toggleDetail">{{ currentVideo.filename }}</div>
+            <video
+                :src="getVideoUrl(currentVideo.id)"
+                controls
+                autoplay
+                :key="currentVideo.id"
+                @ended="nextVideo"
+            ></video>
+            <div class="video-actions">
+                <van-button type="primary" size="small" @click="prevVideo" :disabled="currentIndex===0">上一个</van-button>
+                <van-button type="primary" size="small" @click="nextVideo" :disabled="currentIndex===state.videos.length-1">下一个</van-button>
+            </div>
+            <van-popup v-model:show="showDetail" position="bottom" round>
+                <div style="padding:20px;">
+                    <h4>视频详情</h4>
+                    <p>文件名: {{ currentVideo.filename }}</p>
+                    <p>标签: {{ currentVideo.tags }}</p>
+                    <p>评分: 
+                        <van-rate v-model="currentVideo.score" readonly />
+                    </p>
+                    <p>分类: {{ currentVideo.detail }}</p>
+                    <van-button type="primary" block :url="getVideoUrl(currentVideo.id)" download>下载</van-button>
+                </div>
+            </van-popup>
+        </div>
+        <div v-else style="color:#fff;margin-top:40px;">暂无视频</div>
+    </div>
+</div>
+{% endraw %}
+<script>
+const { createApp, reactive, onMounted, computed, ref } = Vue
+
+createApp({
+    setup() {
+        const state = reactive({
+            videos: [],
+            page: 1,
+            pageSize: 10,
+        })
+        const currentIndex = ref(0)
+        const showDetail = ref(false)
+        let touchStartY = 0
+
+        const currentVideo = computed(() => state.videos[currentIndex.value] || {})
+
+        function getVideoUrl(id) {
+            return `/videos/${id}/stream`
+        }
+
+        async function fetchLatestVideos() {
+            const res = await axios.get('/videos', {
+                params: { latest: 50, page: state.page }
+            })
+            state.videos = res.data
+            currentIndex.value = 0
+        }
+
+        function prevVideo() {
+            if (currentIndex.value > 0) {
+                currentIndex.value--
+                autoPlayVideo()
+            }
+        }
+
+        function nextVideo() {
+            if (currentIndex.value < state.videos.length - 1) {
+                currentIndex.value++
+                autoPlayVideo()
+            }
+        }
+
+        function toggleDetail() {
+            showDetail.value = !showDetail.value
+        }
+
+        function handleTouchStart(e) {
+            touchStartY = e.touches[0].clientY
+        }
+
+        function handleTouchEnd(e) {
+            const deltaY = e.changedTouches[0].clientY - touchStartY
+            if (Math.abs(deltaY) > 50) {
+                if (deltaY < 0) nextVideo()
+                else prevVideo()
+            }
+        }
+
+        function autoPlayVideo() {
+            setTimeout(() => {
+                const videoEl = document.querySelector('video')
+                if (videoEl) videoEl.play()
+            }, 800)
+        }
+
+        onMounted(() => {
+            fetchLatestVideos()
+        })
+
+        return {
+            state,
+            currentIndex,
+            currentVideo,
+            showDetail,
+            getVideoUrl,
+            prevVideo,
+            nextVideo,
+            toggleDetail,
+            handleTouchStart,
+            handleTouchEnd
+        }
+    }
+}).use(vant).mount('#app')
+</script>
+</body>
+</html>
