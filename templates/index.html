@@ -25,6 +25,7 @@
                 @ended="nextVideo"
             ></video>
             <div class="video-actions">
+                <van-button type="warning" size="small" @click="likeVideo(1)">差评</van-button>
                 <van-button type="primary" size="small" @click="prevVideo" :disabled="currentIndex===0">上一个</van-button>
                 <van-button type="primary" size="small" @click="nextVideo" :disabled="currentIndex===state.videos.length-1">下一个</van-button>
                 <van-button type="warning" size="small" @click="likeVideo">喜欢</van-button>

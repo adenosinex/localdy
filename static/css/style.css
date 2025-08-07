@@ -1,18 +1,82 @@
-html, body { height: 100%; margin: 0; padding: 0; background: #000; }
-#app { height: 100vh; width: 100vw; overflow: hidden; background: #000; }
-.main-video { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-.video-box { width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; }
-.video-title { color: #fff; font-size: 22px; font-weight: bold; margin-bottom: 10px; text-align: center; cursor: pointer; }
-video { width: 100vw; height: 60vh; object-fit: cover; background: #000; border-radius: 0; }
-.van-popup { background: #fff; }
-.video-actions { position: absolute; bottom: 30px; left: 0; width: 100vw; display: flex; justify-content: center; gap: 20px; }
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: #000;
+}
+
+#app {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background: #000;
+}
+
+.main-video {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.video-box {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+}
+
+.video-title {
+    color: #fff;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+    cursor: pointer;
+}
+
+video {
+    width: 100vw;
+    height: 60vh;
+    object-fit: cover;
+    background: #000;
+    border-radius: 0;
+}
+
+.van-popup {
+    background: #fff;
+}
+
+.video-actions {
+
+    align-items: center;
+    flex-direction: column;
+    position: absolute;
+    right: 30px;
+     
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
 .search-modal {
     position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0,0,0,0.5);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
     z-index: 999;
-    display: flex; justify-content: center; align-items: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+
 .search-modal-content {
     background: #fff;
     border-radius: 12px;
@@ -21,7 +85,9 @@ video { width: 100vw; height: 60vh; object-fit: cover; background: #000; border-
     max-width: 400px;
     box-shadow: 0 2px 12px #0002;
 }
-.search-input, .search-select {
+
+.search-input,
+.search-select {
     width: 100%;
     margin-bottom: 12px;
     padding: 8px;
@@ -29,7 +95,9 @@ video { width: 100vw; height: 60vh; object-fit: cover; background: #000; border-
     border-radius: 6px;
     border: 1px solid #ccc;
 }
-.search-btn-confirm, .search-btn-cancel {
+
+.search-btn-confirm,
+.search-btn-cancel {
     width: 48%;
     margin: 4px 1%;
     padding: 10px;
@@ -38,9 +106,40 @@ video { width: 100vw; height: 60vh; object-fit: cover; background: #000; border-
     border: none;
     cursor: pointer;
 }
-.search-btn-confirm { background: #1989fa; color: #fff; }
-.search-btn-cancel { background: #eee; color: #333; }
+
+.search-btn-confirm {
+    background: #1989fa;
+    color: #fff;
+}
+
+.search-btn-cancel {
+    background: #eee;
+    color: #333;
+}
+
 @media (max-width: 600px) {
-    .video-title { font-size: 18px; }
-    video { height: 55vh; }
+    .video-title {
+        font-size: 18px;
+    }
+
+    video {
+        height: 55vh;
+    }
+}
+
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    /* 禁止滚动条出现 */
+}
+
+#app {
+    width: 100vw;
+    height: 100vh;
+    box-sizing: border-box;
+    /* 你可以在这里添加居中、背景色等样式 */
 }
