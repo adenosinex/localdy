@@ -21,22 +21,35 @@ createApp({
 
         const currentVideo = computed(() => state.videos[currentIndex.value] || {})
 
-        async function loadVideos() {
-            state.videos = await fetchLatestVideos(state.page, state.pageSize)
-            currentIndex.value = 0
+        async function loadVideos(append = false) {
+            const newVideos = await fetchLatestVideos(state.page, state.pageSize)
+            if (append) {
+                state.videos.push(...newVideos)
+            } else {
+                state.videos = newVideos
+                currentIndex.value = 0
+            }
         }
 
         function prevVideo() {
             if (currentIndex.value > 0) {
                 currentIndex.value--
                 autoPlayVideo()
-            }
+            } 
         }
 
-        function nextVideo() {
+        async function nextVideo() {
             if (currentIndex.value < state.videos.length - 1) {
                 currentIndex.value++
                 autoPlayVideo()
+            } else {
+                // 已到最后一个，自动加载下一页
+                state.page++
+                await loadVideos(true)
+                if (state.videos.length > currentIndex.value + 1) {
+                    currentIndex.value++
+                    autoPlayVideo()
+                }
             }
         }
 
@@ -114,4 +127,3 @@ createApp({
     }
     }).use(vant).mount('#app')
 
- 
