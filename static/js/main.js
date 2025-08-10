@@ -114,6 +114,8 @@ createApp({
             currentVideo.value.score = newScore
         }
 
+        const searchTimeMsg = ref('')
+
         async function doSearch() {
             const start = performance.now()
             state.searchKeyword = searchKeyword.value.trim()
@@ -122,8 +124,11 @@ createApp({
             currentIndex.value = 0
             showSearch.value = false
             await loadVideos(false)
-            const ms = Math.round(performance.now() - start)
-            alert('搜索完成，用时 ' + ms + ' ms')
+            const ms = performance.now() - start
+            searchTimeMsg.value = '搜索完成，用时 ' + (ms / 1000).toFixed(2) + ' 秒'
+            setTimeout(() => {
+                searchTimeMsg.value = ''
+            }, 3000)
         }
 
         async function likeVideo(newScore=5) {
@@ -148,13 +153,13 @@ createApp({
             const start = performance.now()
             await axios.post('/video-paths/index', { path })
             const ms = Math.round(performance.now() - start)
-            alert('索引完成，用时 ' + ms + ' ms')
+            alert('索引完成，用时 ' +  (ms / 1000).toFixed(2) + ' 秒')
         }
         async function indexPath_del(path) {
             const start = performance.now()
             await axios.post('/video-paths/index?del=1', { path })
             const ms = Math.round(performance.now() - start)
-            alert('索引完成，用时 ' + ms + ' ms')
+            alert('索引完成，用时 ' +  (ms / 1000).toFixed(2) + ' 秒')
         }
 
         onMounted(() => {
@@ -185,6 +190,7 @@ createApp({
             addPath,
             indexPath,
             indexPath_del,
+            searchTimeMsg,
         }
     }
     }).use(vant).mount('#app')
