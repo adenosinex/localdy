@@ -165,6 +165,18 @@ createApp({
         onMounted(() => {
             initialLoad()
             fetchPaths()
+
+            // 鼠标滚轮切换视频
+            window.addEventListener('wheel', (e) => {
+                if (e.deltaY > 0) nextVideo()
+                else if (e.deltaY < 0) prevVideo()
+            })
+
+            // 键盘上下方向键切换视频
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown') nextVideo()
+                else if (e.key === 'ArrowUp') prevVideo()
+            })
         })
 
         return {
