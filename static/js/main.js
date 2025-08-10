@@ -115,18 +115,15 @@ createApp({
         }
 
         async function doSearch() {
+            const start = performance.now()
             state.searchKeyword = searchKeyword.value.trim()
             state.searchScore = searchScore.value
             state.page = 1
-            // state.videos = await searchVideos({
-            //     keyword: searchKeyword.value,
-            //     score: searchScore.value,
-            //     page: state.page
-            // })
             currentIndex.value = 0
             showSearch.value = false
-
-            loadVideos(false)
+            await loadVideos(false)
+            const ms = Math.round(performance.now() - start)
+            alert('搜索完成，用时 ' + ms + ' ms')
         }
 
         async function likeVideo(newScore=5) {
@@ -148,14 +145,16 @@ createApp({
         }
 
         async function indexPath(path) {
+            const start = performance.now()
             await axios.post('/video-paths/index', { path })
-            // 可选：弹窗提示索引完成
-            alert('索引完成')
+            const ms = Math.round(performance.now() - start)
+            alert('索引完成，用时 ' + ms + ' ms')
         }
         async function indexPath_del(path) {
+            const start = performance.now()
             await axios.post('/video-paths/index?del=1', { path })
-            // 可选：弹窗提示索引完成
-            alert('索引完成')
+            const ms = Math.round(performance.now() - start)
+            alert('索引完成，用时 ' + ms + ' ms')
         }
 
         onMounted(() => {
