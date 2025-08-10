@@ -49,6 +49,7 @@ video {
 
 /* 竖屏视频样式 */
 video {
+    object-fit: contain;
     height: auto;
     width: 44vh;
 }
