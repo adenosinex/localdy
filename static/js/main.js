@@ -25,8 +25,11 @@ createApp({
         const currentIndex = ref(0)
         const showDetail = ref(false)
         const showSearch = ref(false)
+        const showConfig = ref(false)
         const searchKeyword = ref('')
         const searchScore = ref(0)
+        const newPath = ref('')
+        const pathList = ref([])
         let touchStartY = 0
         let touchActive = false
 
@@ -132,8 +135,32 @@ createApp({
             currentVideo.value.score = newScore;
         }
 
+        async function fetchPaths() {
+            const resp = await axios.get('/video-paths')
+            pathList.value = resp.data.paths || []
+        }
+
+        async function addPath() {
+            if (!newPath.value.trim()) return
+            await axios.post('/video-paths', { path: newPath.value.trim() })
+            newPath.value = ''
+            fetchPaths()
+        }
+
+        async function indexPath(path) {
+            await axios.post('/video-paths/index', { path })
+            // 可选：弹窗提示索引完成
+            alert('索引完成')
+        }
+        async function indexPath_del(path) {
+            await axios.post('/video-paths/index?del=1', { path })
+            // 可选：弹窗提示索引完成
+            alert('索引完成')
+        }
+
         onMounted(() => {
             initialLoad()
+            fetchPaths()
         })
 
         return {
@@ -153,7 +180,12 @@ createApp({
             searchScore,
             doSearch,
             likeVideo, // 新增
-           
+            showConfig,
+            newPath,
+            pathList,
+            addPath,
+            indexPath,
+            indexPath_del,
         }
     }
     }).use(vant).mount('#app')

@@ -74,6 +74,21 @@ def add_video_record(filename, tags, score, detail):
         session.rollback()
     session.close()
  
+def del_videos_path(path):
+    """
+    删除指定路径下的视频记录
+    """
+    session = Session()
+    try:
+        deleted_count = session.query(Video).filter(Video.detail.like(f'%{path}%')).delete(synchronize_session=False)
+        session.commit()
+        print(f"已删除路径 {path} 下的 {deleted_count} 条视频记录。")
+    except Exception as e:
+        session.rollback()
+        print(f"删除操作失败: {e}")
+    finally:
+        session.close()
+
 def init_data_from_folder(root_folder):
     """
     遍历指定文件夹及子文件夹，将所有文件写入数据库。
@@ -105,6 +120,19 @@ def init_data_from_folder(root_folder):
     cnt,error=add_video_records_batch(videos)
     print(f"批量添加视频记录完成，耗时：{time.time() - start_time:.2f}秒")
     print(f"数据初始化完成。共添加视频文件：{cnt}, 跳过已存在的视频：{error}")
+    session = Session()
+    # 获取文件夹下所有视频文件名
+    files = {f['filename'] for f in videos}
+    db_files = {v.filename for v in session.query(Video).filter(Video.detail.like(f'%{root_folder}%')).all()}
+    
+    # 删除数据库中不存在的文件
+    for f in db_files:
+        if f not in files:
+            session.query(Video).filter(Video.filename == f, Video.detail.like(f'%{root_folder}%'))\
+                .delete(synchronize_session="fetch")
+    session.commit()
+    session.close()
+
 if __name__ == "__main__":
     # 修改为你的视频根目录路径
     # video_root = input("请输入视频根目录路径：")

@@ -7,11 +7,11 @@ Base = declarative_base()
 
 class Video(Base):
     __tablename__ = 'videos'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True)
     filename = Column(String)
+    detail = Column(String)  # 路径
     tags = Column(String)
-    score = Column(Integer, default=0)
-    detail = Column(String, default='')
+    score = Column(Integer)
 
 def delete_video(video_id):
     """

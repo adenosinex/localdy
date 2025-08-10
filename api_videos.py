@@ -1,8 +1,56 @@
 from flask import Blueprint, request, jsonify, Response, stream_with_context, send_file, abort
 from models import Video, extract_tags, Session
 import os
-
+import json
+from data_init import init_data_from_folder,del_videos_path
 bp_videos = Blueprint('videos', __name__)
+
+PATHS_FILE = 'video_paths.json'
+
+def load_paths():
+    if os.path.exists(PATHS_FILE):
+        with open(PATHS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+def save_paths(paths):
+    with open(PATHS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(paths, f, ensure_ascii=False)
+
+@bp_videos.route('/video-paths', methods=['GET'])
+def get_video_paths():
+    return jsonify({'paths': load_paths()})
+
+@bp_videos.route('/video-paths', methods=['POST'])
+def add_video_path():
+    data = request.get_json()
+    path = data.get('path', '').strip()
+    if not path or not os.path.isdir(path):
+        return jsonify({'error': '路径无效'}), 400
+    paths = load_paths()
+    if path not in paths:
+        paths.append(path)
+        save_paths(paths)
+        init_data_from_folder(path)  # 初始化数据
+    return jsonify({'success': True})
+
+@bp_videos.route('/video-paths/index', methods=['POST'])
+def index_video_path():
+    data = request.get_json()
+    path = data.get('path', '').strip()
+    if not path or not os.path.isdir(path):
+        return jsonify({'error': '路径无效'}), 400
+    if request.args.get('del') == '1':
+        paths = load_paths()
+        if path in paths:
+            paths.remove(path)
+            save_paths(paths)
+            del_videos_path(path)  # 删除数据
+        return jsonify({'success': True})
+    else:
+        init_data_from_folder(path)
+    
+    return jsonify({'success': True})
 
 @bp_videos.route('/videos', methods=['GET'])
 def get_videos():
@@ -28,7 +76,11 @@ def get_videos():
     if search:
         keywords = search.strip().split()
         for kw in keywords:
-            query = query.filter(Video.filename.like(f"%{kw}%"))
+            query2 = query.filter(Video.filename.like(f"%{kw}%"))
+            if query2.count() == 0:
+                query2 = session.query(Video).filter(Video.detail.like(f"%{kw}%"))
+            query = query2
+                 
     query = query.order_by(Video.id.desc())
     if page_size:
         query = query.offset((page-1)*page_size).limit(page_size)

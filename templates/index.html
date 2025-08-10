@@ -14,6 +14,7 @@
         <!-- 搜索按钮 -->
         <div style="position:absolute;top:18px;right:18px;z-index:10;">
             <van-button type="primary" icon="search" size="small" @click="showSearch = true">搜索</van-button>
+            <van-button type="default" icon="setting" size="small" style="margin-left:8px;" @click="showConfig = true">配置</van-button>
         </div>
         <div class="video-box" v-if="state.videos.length">
             <div class="video-title" @click="toggleDetail">{{ currentVideo.filename }}</div>
@@ -62,6 +63,22 @@
                 </div>
                 <button class="search-btn-confirm" @click="doSearch">确认搜索</button>
                 <button class="search-btn-cancel" @click="showSearch=false">取消</button>
+            </div>
+        </div>
+        <!-- 配置弹窗 -->
+        <div v-if="showConfig" class="search-modal">
+            <div class="search-modal-content">
+                <h4>视频路径配置</h4>
+                <input type="text" v-model="newPath" placeholder="输入新路径" class="search-input" />
+                <button class="search-btn-confirm" @click="addPath">添加路径</button>
+                <button class="search-btn-cancel" @click="showConfig=false">关闭</button>
+                <div style="margin-top:16px;">
+                    <div v-for="(path, idx) in pathList" :key="path" style="display:flex;align-items:center;margin-bottom:8px;">
+                        <button @click="indexPath_del(path)" style="margin-left:8px;">删除</button>
+                        <span style="flex:1;">{{ path }}</span>
+                        <button @click="indexPath(path)" style="margin-left:8px;">索引</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
