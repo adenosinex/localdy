@@ -27,6 +27,7 @@
                 autoplay
                 :key="currentVideo.id"
                 @ended="nextVideo"
+                :class="videoClass"
             ></video>
             <div class="video-actions">
                 <van-button type="warning" size="small" @click="likeVideo(1)">差评</van-button>

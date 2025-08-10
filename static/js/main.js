@@ -35,6 +35,35 @@ createApp({
 
         const currentVideo = computed(() => state.videos[currentIndex.value] || {})
 
+        const videoClass = ref('video-portrait')
+        const lastRatios = ref([]) // 记录最近3次视频比例
+
+        function updateVideoClass() {
+            const videoEl = document.querySelector('video')
+            let isLandscape = false
+            if (videoEl && videoEl.videoWidth && videoEl.videoHeight) {
+                isLandscape = videoEl.videoHeight / videoEl.videoWidth <= 1.1
+                // 记录比例
+                lastRatios.value.push(isLandscape)
+                if (lastRatios.value.length > 3) lastRatios.value.shift()
+                // 判断最近3次是否全为横屏
+                if (lastRatios.value.length === 3 && lastRatios.value.every(v => v)) {
+                    videoClass.value = 'video-landscape'
+                } else if (!isLandscape) {
+                    videoClass.value = 'video-portrait'
+                } else {
+                    videoClass.value = 'video-landscape'
+                }
+            } else {
+                // 未检测到宽高，按最近3次判断
+                if (lastRatios.value.length === 3 && lastRatios.value.every(v => v)) {
+                    videoClass.value = 'video-landscape'
+                } else {
+                    videoClass.value = 'video-portrait'
+                }
+            }
+        }
+
         async function loadVideos(append = false) {
             const newVideos = await fetchLatestVideos(state )
             if (append) {
@@ -104,7 +133,12 @@ createApp({
         function autoPlayVideo() {
             setTimeout(() => {
                 const videoEl = document.querySelector('video')
-                if (videoEl) videoEl.play()
+                if (videoEl) {
+                    videoEl.play()
+                    videoEl.onloadedmetadata = updateVideoClass
+                    // 只在横屏时切换class，竖屏不变化，减少闪烁
+                    updateVideoClass()
+                }
             }, 800)
         }
 
@@ -162,9 +196,11 @@ createApp({
             alert('索引完成，用时 ' +  (ms / 1000).toFixed(2) + ' 秒')
         }
 
+        // 也在视频切换后立即尝试更新
         onMounted(() => {
             initialLoad()
             fetchPaths()
+            setTimeout(updateVideoClass, 1000)
 
             // 鼠标滚轮切换视频
             window.addEventListener('wheel', (e) => {
@@ -203,6 +239,7 @@ createApp({
             indexPath,
             indexPath_del,
             searchTimeMsg,
+            videoClass,
         }
     }
     }).use(vant).mount('#app')
