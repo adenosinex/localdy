@@ -79,6 +79,8 @@ createApp({
             const totalPages = await getTotalPages(state.pageSize)
             state.page = Math.floor(Math.random() * totalPages) + 1
             await loadVideos(false)
+            showSearch.value = false // 首屏不显示搜索弹窗
+            showConfig.value = false // 首屏不显示配置弹窗
         }
 
         function prevVideo() {
