@@ -28,4 +28,6 @@ def del_1score():
     finally:
         session.close()
 
-del_1score()
+# del_1score()
+
+ 
