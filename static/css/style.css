@@ -71,6 +71,21 @@ video {
     z-index: 1;
 }
 
+/* Loading screen styles */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
 /* 竖屏视频样式 */
 video {
     object-fit: contain;

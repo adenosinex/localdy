@@ -18,12 +18,19 @@
                 <img src="/static/logo.png" alt="LOGO" style="height:40px;">
             </a>
         </div>
-        <!-- 搜索按钮 -->
-        <div style="position:absolute;top:18px;right:18px;z-index:10;">
+        <!-- 搜索按钮 - 只在加载完成后显示 -->
+        <div v-show="!isLoading" style="position:absolute;top:18px;right:18px;z-index:10;">
             <van-button type="primary" icon="search" size="small" @click="showSearch = true">搜索</van-button>
             <van-button type="default" icon="setting" size="small" style="margin-left:8px;" @click="showConfig = true">配置</van-button>
         </div>
-        <div class="video-box" v-if="state.videos.length">
+        <!-- 加载屏幕 -->
+        <div v-if="isLoading" class="loading-screen">
+            <img src="/static/logo.png" alt="LOGO" style="height:80px;margin-bottom:30px;">
+            <div style="color:#fff;font-size:18px;">加载中...</div>
+        </div>
+        
+        <!-- 视频界面 -->
+        <div class="video-box" v-show="!isLoading && state.videos.length">
             <div v-if="searchTimeMsg" style="position:absolute;top:0;left:0;right:0;background:rgba(0,0,0,0.7);color:#fff;text-align:center;z-index:20;padding:8px;">
                 {{ searchTimeMsg }}
             </div>
@@ -65,7 +72,8 @@
                 </div>
             </van-popup>
         </div>
-        <div v-else style="color:#fff;margin-top:40px;text-align:center;">
+        <!-- 无视频状态 -->
+        <div v-show="!isLoading && !state.videos.length" style="color:#fff;margin-top:40px;text-align:center;">
             <img src="/static/logo.png" alt="LOGO" style="height:60px;margin-bottom:20px;">
             <div>暂无视频</div>
         </div>

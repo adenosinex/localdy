@@ -37,6 +37,7 @@ createApp({
         const videoQueue = ref([])
         const activeVideoIndex = ref(1) // Middle video is active
         const videoLoadStates = ref([false, false, false])
+        const isLoading = ref(true) // Loading state for initial UI
         
         const currentVideo = computed(() => {
             if (videoQueue.value.length > 0 && activeVideoIndex.value < videoQueue.value.length) {
@@ -130,17 +131,27 @@ createApp({
         }
 
         async function initialLoad() {
-            // 获取总页数，随机选择一个页码
-            const totalPages = await getTotalPages(state.pageSize)
-            state.page = Math.floor(Math.random() * totalPages) + 1
-            await loadVideos(false)
-            showSearch.value = false // 首屏不显示搜索弹窗
-            showConfig.value = false // 首屏不显示配置弹窗
-            
-            // Start playing the first video after initialization
-            setTimeout(() => {
-                playActiveVideo()
-            }, 1000)
+            try {
+                isLoading.value = true
+                // 获取总页数，随机选择一个页码
+                const totalPages = await getTotalPages(state.pageSize)
+                state.page = Math.floor(Math.random() * totalPages) + 1
+                await loadVideos(false)
+                showSearch.value = false // 首屏不显示搜索弹窗
+                showConfig.value = false // 首屏不显示配置弹窗
+                
+                // Wait a bit for videos to initialize, then hide loading
+                setTimeout(() => {
+                    isLoading.value = false
+                    // Start playing the first video after loading is complete
+                    setTimeout(() => {
+                        playActiveVideo()
+                    }, 500)
+                }, 1500)
+            } catch (error) {
+                console.error('Initial load failed:', error)
+                isLoading.value = false
+            }
         }
 
         function prevVideo() {
@@ -393,6 +404,7 @@ createApp({
             activeVideoIndex,
             onVideoLoaded,
             onVideoReady,
+            isLoading,
         }
     }
     }).use(vant).mount('#app')
