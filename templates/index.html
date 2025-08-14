@@ -29,14 +29,23 @@
             </div>
             <div class="video-title" @click="toggleDetail">{{ currentVideo.filename }}</div>
               
-            <video
-                :src="getVideoUrl(currentVideo.id)"
-                controls
-                autoplay
-                :key="currentVideo.id"
-                @ended="nextVideo"
-                :class="videoClass"
-            ></video>
+            <!-- 3-video preloading system -->
+            <div class="video-container">
+                <video
+                    v-for="(video, index) in videoQueue"
+                    :key="video.id"
+                    :ref="'video' + index"
+                    :src="getVideoUrl(video.id)"
+                    :class="[videoClass, { 'active-video': index === activeVideoIndex, 'hidden-video': index !== activeVideoIndex }]"
+                    :muted="index !== activeVideoIndex"
+                    :controls="index === activeVideoIndex"
+                    preload="auto"
+                    playsinline
+                    @ended="nextVideo"
+                    @loadeddata="onVideoLoaded(index)"
+                    @canplaythrough="onVideoReady(index)"
+                ></video>
+            </div>
             <div class="video-actions">
                 <van-button type="warning" size="small" @click="likeVideo(1)">差评</van-button>
                 <van-button type="primary" size="small" @click="prevVideo"  >上一个</van-button>

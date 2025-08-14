@@ -33,13 +33,27 @@ createApp({
         let touchStartY = 0
         let touchActive = false
 
-        const currentVideo = computed(() => state.videos[currentIndex.value] || {})
+        // 3-video preloading system
+        const videoQueue = ref([])
+        const activeVideoIndex = ref(1) // Middle video is active
+        const videoLoadStates = ref([false, false, false])
+        
+        const currentVideo = computed(() => {
+            if (videoQueue.value.length > 0 && activeVideoIndex.value < videoQueue.value.length) {
+                return videoQueue.value[activeVideoIndex.value] || {}
+            }
+            return state.videos[currentIndex.value] || {}
+        })
 
         const videoClass = ref('video-portrait')
         const lastRatios = ref([]) // 记录最近3次视频比例
 
-        function updateVideoClass() {
-            const videoEl = document.querySelector('video')
+        function updateVideoClass(videoEl = null) {
+            if (!videoEl) {
+                const videos = document.querySelectorAll('video')
+                videoEl = videos[activeVideoIndex.value]
+            }
+            
             let isLandscape = false
             if (videoEl && videoEl.videoWidth && videoEl.videoHeight) {
                 isLandscape = videoEl.videoHeight / videoEl.videoWidth <= 1.1
@@ -72,6 +86,47 @@ createApp({
                 state.videos = newVideos
                 currentIndex.value = 0
             }
+            // Initialize video queue after loading videos
+            initializeVideoQueue()
+        }
+
+        function initializeVideoQueue() {
+            if (state.videos.length === 0) return
+            
+            videoQueue.value = []
+            activeVideoIndex.value = 1
+            videoLoadStates.value = [false, false, false]
+            
+            // Fill the queue with 3 videos
+            for (let i = 0; i < 3; i++) {
+                const videoIndex = (currentIndex.value - 1 + i + state.videos.length) % state.videos.length
+                if (state.videos[videoIndex]) {
+                    videoQueue.value.push(state.videos[videoIndex])
+                }
+            }
+        }
+
+        function updateVideoQueue(direction = 'next') {
+            if (state.videos.length === 0) return
+            
+            if (direction === 'next') {
+                // Remove first video, shift others, add new video at the end
+                videoQueue.value.shift()
+                const nextVideoIndex = (currentIndex.value + 1) % state.videos.length
+                if (state.videos[nextVideoIndex]) {
+                    videoQueue.value.push(state.videos[nextVideoIndex])
+                }
+            } else {
+                // Remove last video, unshift others, add new video at the beginning
+                videoQueue.value.pop()
+                const prevVideoIndex = (currentIndex.value - 2 + state.videos.length) % state.videos.length
+                if (state.videos[prevVideoIndex]) {
+                    videoQueue.value.unshift(state.videos[prevVideoIndex])
+                }
+            }
+            
+            // Reset load states
+            videoLoadStates.value = [false, false, false]
         }
 
         async function initialLoad() {
@@ -81,28 +136,61 @@ createApp({
             await loadVideos(false)
             showSearch.value = false // 首屏不显示搜索弹窗
             showConfig.value = false // 首屏不显示配置弹窗
+            
+            // Start playing the first video after initialization
+            setTimeout(() => {
+                playActiveVideo()
+            }, 1000)
         }
 
         function prevVideo() {
-            if (currentIndex.value > 0) {
-                currentIndex.value--
-                autoPlayVideo()
-            } 
+            if (state.videos.length === 0) return
+            
+            // Pause current video
+            const currentVideo = document.querySelectorAll('video')[activeVideoIndex.value]
+            if (currentVideo) {
+                currentVideo.pause()
+                currentVideo.muted = true
+            }
+            
+            // Update current index
+            currentIndex.value = (currentIndex.value - 1 + state.videos.length) % state.videos.length
+            
+            // Update video queue
+            updateVideoQueue('prev')
+            
+            // Play the middle video (index 1) after a short delay
+            setTimeout(() => {
+                playActiveVideo()
+            }, 200)
         }
 
         async function nextVideo() {
-            if (currentIndex.value < state.videos.length - 1) {
-                currentIndex.value++
-                autoPlayVideo()
-            } else {
-                // 已到最后一个，自动加载下一页
+            if (state.videos.length === 0) return
+            
+            // Pause current video
+            const currentVideo = document.querySelectorAll('video')[activeVideoIndex.value]
+            if (currentVideo) {
+                currentVideo.pause()
+                currentVideo.muted = true
+            }
+            
+            // Check if we need to load more videos
+            if (currentIndex.value >= state.videos.length - 2) {
                 state.page++
                 await loadVideos(true)
-                if (state.videos.length > currentIndex.value + 1) {
-                    currentIndex.value++
-                    autoPlayVideo()
-                }
             }
+            
+            // Update current index
+            currentIndex.value = (currentIndex.value + 1) % state.videos.length
+            
+            // Update video queue
+            updateVideoQueue('next')
+            
+            // Play the middle video (index 1) after a short delay
+            setTimeout(() => {
+                playActiveVideo()
+            }, 200)
         }
 
         function toggleDetail() {
@@ -132,16 +220,74 @@ createApp({
             touchActive = false
         }
 
-        function autoPlayVideo() {
-            setTimeout(() => {
-                const videoEl = document.querySelector('video')
-                if (videoEl) {
-                    videoEl.play()
-                    videoEl.onloadedmetadata = updateVideoClass
-                    // 只在横屏时切换class，竖屏不变化，减少闪烁
-                    updateVideoClass()
+        function pauseAllVideos() {
+            const videos = document.querySelectorAll('video')
+            videos.forEach((video, index) => {
+                if (index !== activeVideoIndex.value) {
+                    video.pause()
+                    video.muted = true
                 }
-            }, 800)
+            })
+        }
+        
+        function playActiveVideo() {
+            const videos = document.querySelectorAll('video')
+            if (videos[activeVideoIndex.value]) {
+                const activeVideo = videos[activeVideoIndex.value]
+                
+                // Only unmute and play, don't restart from beginning
+                activeVideo.muted = false
+                
+                // Only restart if video hasn't started playing yet or is at the end
+                if (activeVideo.currentTime === 0 || activeVideo.ended) {
+                    activeVideo.currentTime = 0
+                }
+                
+                activeVideo.play().catch(e => console.log('Play failed:', e))
+                
+                // Update video class based on dimensions (only once when metadata loads)
+                if (!activeVideo.hasAttribute('data-class-updated')) {
+                    activeVideo.onloadedmetadata = () => {
+                        updateVideoClass(activeVideo)
+                        activeVideo.setAttribute('data-class-updated', 'true')
+                    }
+                    if (activeVideo.readyState >= 1) {
+                        updateVideoClass(activeVideo)
+                        activeVideo.setAttribute('data-class-updated', 'true')
+                    }
+                }
+            }
+        }
+        
+        function onVideoLoaded(index) {
+            videoLoadStates.value[index] = true
+        }
+        
+        function onVideoReady(index) {
+            // Video is ready to play
+            videoLoadStates.value[index] = true
+            
+            // Only auto-play if this is the active video and it's not already playing
+            if (index === activeVideoIndex.value) {
+                const videos = document.querySelectorAll('video')
+                const video = videos[index]
+                if (video && video.paused && !video.muted) {
+                    setTimeout(() => {
+                        video.play().catch(e => console.log('Auto-play failed:', e))
+                    }, 100)
+                }
+            }
+        }
+
+        function autoPlayVideo() {
+            // Only play if video is not already playing
+            const videos = document.querySelectorAll('video')
+            const activeVideo = videos[activeVideoIndex.value]
+            if (activeVideo && activeVideo.paused) {
+                setTimeout(() => {
+                    playActiveVideo()
+                }, 300)
+            }
         }
 
         async function updateScoreHandler(newScore) {
@@ -242,6 +388,11 @@ createApp({
             indexPath_del,
             searchTimeMsg,
             videoClass,
+            // 3-video preloading system
+            videoQueue,
+            activeVideoIndex,
+            onVideoLoaded,
+            onVideoReady,
         }
     }
     }).use(vant).mount('#app')
