@@ -44,7 +44,8 @@ def add_video_records_batch(video_list):
                 'filename': item['filename'],
                 'tags': ','.join(item['tags']) if isinstance(item['tags'], list) else item['tags'],
                 'score': item['score'],
-                'detail': item['detail']
+                'detail': item['detail'],
+                'file_size': item.get('file_size', 0)
             })
     
     if new_videos:
@@ -111,10 +112,16 @@ def init_data_from_folder(root_folder):
                 continue
             full_path = os.path.join(dirpath, fname)
             tags = extract_tags(fname)
+            # 获取文件大小
+            try:
+                file_size = os.path.getsize(full_path)
+            except OSError:
+                file_size = 0
             videos.append({'filename': fname,
                            'tags': tags,
                            'score': 0,  # 默认评分
-                           'detail': full_path})
+                           'detail': full_path,
+                           'file_size': file_size})
             max_length -= 1
         if max_length <= 0:
             pass

@@ -93,6 +93,31 @@
                         <option value="5">5分</option>
                     </select>
                 </div>
+                <div style="margin:10px 0;">
+                    <span>文件大小筛选：</span>
+                    <div style="margin-top:5px;">
+                        <select v-model="sizeOperator" class="search-select" style="width:80px;">
+                            <option value="lte">≤</option>
+                            <option value="gte">≥</option>
+                            <option value="eq">=</option>
+                        </select>
+                        <input type="number" v-model="sizeValue" placeholder="MB" class="search-input" style="width:80px;margin-left:5px;" min="1" max="10000" />
+                        <span style="margin-left:5px;">MB</span>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <span style="font-size:12px;color:#666;">快捷筛选：</span>
+                        <div style="margin-top:3px;">
+                            <button @click="setQuickSize('lte', 50)" class="quick-size-btn">≤50MB</button>
+                            <button @click="setQuickSize('lte', 100)" class="quick-size-btn">≤100MB</button>
+                            <button @click="setQuickSize('lte', 200)" class="quick-size-btn">≤200MB</button>
+                            <button @click="setQuickSize('lte', 500)" class="quick-size-btn">≤500MB</button>
+                            <button @click="setQuickSize('gte', 100)" class="quick-size-btn">≥100MB</button>
+                            <button @click="setQuickSize('gte', 500)" class="quick-size-btn">≥500MB</button>
+                            <button @click="setQuickSize('gte', 1000)" class="quick-size-btn">≥1GB</button>
+                            <button @click="clearSizeFilter" class="quick-size-btn clear-btn">清除</button>
+                        </div>
+                    </div>
+                </div>
                 <button class="search-btn-confirm" @click="doSearch">确认搜索</button>
                 <button class="search-btn-cancel" @click="showSearch=false">取消</button>
             </div>

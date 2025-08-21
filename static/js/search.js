@@ -12,6 +12,12 @@ export class SearchManager {
         const start = performance.now()
         this.state.searchKeyword = this.refs.searchKeyword.value.trim()
         this.state.searchScore = this.refs.searchScore.value
+        // 更新大小过滤状态
+        if (this.refs.sizeValue.value && this.refs.sizeValue.value > 0) {
+            this.state.searchSize = `${this.refs.sizeOperator.value}:${this.refs.sizeValue.value}`
+        } else {
+            this.state.searchSize = 0
+        }
         this.state.page = 1
         this.refs.currentIndex.value = 0
         this.refs.showSearch.value = false
@@ -43,6 +49,12 @@ export class SearchManager {
             url.searchParams.delete('score')
         }
         
+        if (this.state.searchSize && this.state.searchSize !== 0) {
+            url.searchParams.set('size', this.state.searchSize)
+        } else {
+            url.searchParams.delete('size')
+        }
+        
         // 更新浏览器历史记录，但不刷新页面
         window.history.pushState({}, '', url)
     }
@@ -53,6 +65,7 @@ export class SearchManager {
         
         const searchParam = urlParams.get('search')
         const scoreParam = urlParams.get('score')
+        const sizeParam = urlParams.get('size')
         
         if (searchParam) {
             this.refs.searchKeyword.value = searchParam
@@ -67,8 +80,29 @@ export class SearchManager {
             }
         }
         
+        if (sizeParam) {
+            if (sizeParam.includes(':')) {
+                // 新格式: "operator:value" (例如: "lte:100", "gte:500")
+                const [operator, value] = sizeParam.split(':')
+                const sizeValue = parseInt(value)
+                if (!isNaN(sizeValue) && sizeValue > 0) {
+                    this.refs.sizeOperator.value = operator
+                    this.refs.sizeValue.value = sizeValue
+                    this.state.searchSize = sizeParam
+                }
+            } else {
+                // 兼容旧格式: 纯数字，默认为小于等于
+                const size = parseInt(sizeParam)
+                if (!isNaN(size) && size > 0) {
+                    this.refs.sizeOperator.value = 'lte'
+                    this.refs.sizeValue.value = size
+                    this.state.searchSize = `lte:${size}`
+                }
+            }
+        }
+        
         // 如果有搜索参数，自动执行搜索
-        if (searchParam || scoreParam) {
+        if (searchParam || scoreParam || sizeParam) {
             return true // 表示需要执行搜索
         }
         
@@ -79,8 +113,11 @@ export class SearchManager {
     clearSearch() {
         this.refs.searchKeyword.value = ''
         this.refs.searchScore.value = 0
+        this.refs.sizeOperator.value = 'lte'
+        this.refs.sizeValue.value = ''
         this.state.searchKeyword = ''
         this.state.searchScore = 0
+        this.state.searchSize = 0
         this.state.page = 1
         this.refs.currentIndex.value = 0
         
@@ -88,6 +125,7 @@ export class SearchManager {
         const url = new URL(window.location)
         url.searchParams.delete('search')
         url.searchParams.delete('score')
+        url.searchParams.delete('size')
         window.history.pushState({}, '', url)
     }
 

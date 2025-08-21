@@ -8,11 +8,12 @@ import { UrlParamsManager } from './url-params.js'
 
 const { createApp, reactive, onMounted, computed, ref, watch } = Vue
 
-async function getTotalPages(pageSize, searchKeyword = '', searchScore = 0) {
+async function getTotalPages(pageSize, searchKeyword = '', searchScore = 0, searchSize = 0) {
     // 获取总视频数
     const params = []
     if (searchKeyword) params.push(`search=${encodeURIComponent(searchKeyword)}`)
     if (searchScore && searchScore > 0) params.push(`score=${searchScore}`)
+    if (searchSize && searchSize > 0) params.push(`size=${searchSize}`)
     const url = `/videos/count${params.length ? '?' + params.join('&') : ''}`
     const resp = await axios.get(url)
     const total = resp.data.total || 0
@@ -25,7 +26,8 @@ createApp({
             page: 1,
             pageSize: 10,
             searchKeyword: '',
-            searchScore: 0
+            searchScore: 0,
+            searchSize: 0
         })
         const currentIndex = ref(0)
         const showDetail = ref(false)
@@ -33,6 +35,9 @@ createApp({
         const showConfig = ref(false)
         const searchKeyword = ref('')
         const searchScore = ref(0)
+        const searchSize = ref(0)
+        const sizeOperator = ref('lte')
+        const sizeValue = ref('')
         const newPath = ref('')
         const pathList = ref([])
         const searchTimeMsg = ref('')
@@ -55,6 +60,9 @@ createApp({
             showSearch,
             searchKeyword,
             searchScore,
+            searchSize,
+            sizeOperator,
+            sizeValue,
             searchTimeMsg,
             newPath,
             pathList
@@ -100,7 +108,7 @@ createApp({
 
                 if (!hasUrlSearch || true) {
                     // 获取总页数，随机选择一个页码
-                    const totalPages = await getTotalPages(state.pageSize, searchKeyword.value)
+                    const totalPages = await getTotalPages(state.pageSize, state.searchKeyword, state.searchScore, state.searchSize)
                     state.page = Math.floor(Math.random() * totalPages) + 1
                     // const random_index = Math.floor(Math.random() * state.pageSize)
                     // for(let i = 0; i < random_index; i++) {
@@ -161,6 +169,29 @@ createApp({
         const indexPath = (path) => configManager.indexPath(path)
         const indexPath_del = (path) => configManager.indexPath_del(path)
 
+        // 大小过滤相关方法
+        const setQuickSize = (operator, size) => {
+            sizeOperator.value = operator
+            sizeValue.value = size
+            // 自动更新搜索状态
+            updateSizeFilter()
+        }
+
+        const clearSizeFilter = () => {
+            sizeOperator.value = 'lte'
+            sizeValue.value = ''
+            state.searchSize = 0
+        }
+
+        const updateSizeFilter = () => {
+            if (sizeValue.value && sizeValue.value > 0) {
+                // 构建大小过滤字符串: operator:value (例如: "lte:100", "gte:500")
+                state.searchSize = `${sizeOperator.value}:${sizeValue.value}`
+            } else {
+                state.searchSize = 0
+            }
+        }
+
         onMounted(() => {
             initialLoad()
             fetchPaths()
@@ -189,6 +220,12 @@ createApp({
             showSearch,
             searchKeyword,
             searchScore,
+            searchSize,
+            sizeOperator,
+            sizeValue,
+            setQuickSize,
+            clearSizeFilter,
+            updateSizeFilter,
             doSearch,
             likeVideo,
             showConfig,

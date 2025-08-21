@@ -68,6 +68,7 @@ def get_videos():
     score = request.args.get('score')
     search = request.args.get('search')
     tags = request.args.get('tags')
+    size = request.args.get('size')
     latest = request.args.get('latest')
     stream = request.args.get('stream', 'false').lower() == 'true'
 
@@ -83,6 +84,25 @@ def get_videos():
             # if query2.count() == 0:
             #     query2 = session.query(Video).filter(Video.detail.like(f"%{kw}%"))
             query = query2
+    if size:
+        # 处理增强的大小过滤格式: "operator:value" 或 纯数字(兼容旧格式)
+        if ':' in size:
+            operator, value = size.split(':', 1)
+            size_mb = int(value)
+            size_bytes = size_mb * 1024 * 1024
+            
+            if operator == 'lte':  # 小于等于
+                query = query.filter(Video.file_size <= size_bytes)
+            elif operator == 'gte':  # 大于等于
+                query = query.filter(Video.file_size >= size_bytes)
+            elif operator == 'eq':   # 等于 (允许±10MB误差)
+                margin = 10 * 1024 * 1024  # 10MB误差
+                query = query.filter(Video.file_size.between(size_bytes - margin, size_bytes + margin))
+        else:
+            # 兼容旧格式：纯数字，默认为小于等于
+            size_mb = int(size)
+            size_bytes = size_mb * 1024 * 1024
+            query = query.filter(Video.file_size <= size_bytes)
                  
     query = query.order_by(Video.id.desc())
     if page_size:
@@ -166,6 +186,7 @@ def get_videos_count():
     score = request.args.get('score')
     search = request.args.get('search')
     tags = request.args.get('tags')
+    size = request.args.get('size')
 
     if search:
         keywords = search.strip().split()
@@ -177,6 +198,25 @@ def get_videos_count():
      
     if score:
         query = query.filter(Video.score == int(score))
+    if size:
+        # 处理增强的大小过滤格式: "operator:value" 或 纯数字(兼容旧格式)
+        if ':' in size:
+            operator, value = size.split(':', 1)
+            size_mb = int(value)
+            size_bytes = size_mb * 1024 * 1024
+            
+            if operator == 'lte':  # 小于等于
+                query = query.filter(Video.file_size <= size_bytes)
+            elif operator == 'gte':  # 大于等于
+                query = query.filter(Video.file_size >= size_bytes)
+            elif operator == 'eq':   # 等于 (允许±10MB误差)
+                margin = 10 * 1024 * 1024  # 10MB误差
+                query = query.filter(Video.file_size.between(size_bytes - margin, size_bytes + margin))
+        else:
+            # 兼容旧格式：纯数字，默认为小于等于
+            size_mb = int(size)
+            size_bytes = size_mb * 1024 * 1024
+            query = query.filter(Video.file_size <= size_bytes)
     # if tags:
     #     for tag in tags.split(','):
     #         query = query.filter(Video.tags.like(f"%{tag}%"))
