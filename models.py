@@ -49,50 +49,112 @@ def init_db():
     """初始化数据库，自动添加缺失的字段以保持兼容性"""
     Base.metadata.create_all(engine)
     
-    # 检查并添加缺失的字段
+    # 执行数据库迁移
+    migrate_database()
+
+def migrate_database():
+    """执行数据库迁移，添加缺失的字段并更新数据"""
+    migrations = [
+        {
+            'field': 'file_size',
+            'sql': 'ALTER TABLE videos ADD COLUMN file_size BIGINT DEFAULT 0',
+            'update_function': update_existing_file_sizes,
+            'description': '文件大小字段'
+        }
+        # 未来可以在这里添加更多迁移
+        # {
+        #     'field': 'duration',
+        #     'sql': 'ALTER TABLE videos ADD COLUMN duration INTEGER DEFAULT 0',
+        #     'update_function': update_existing_durations,
+        #     'description': '视频时长字段'
+        # }
+    ]
+    
     try:
         with engine.connect() as conn:
-            # 检查是否存在 file_size 字段
+            # 获取当前表结构
             result = conn.execute(text("PRAGMA table_info(videos)"))
-            columns = [row[1] for row in result.fetchall()]
+            existing_columns = [row[1] for row in result.fetchall()]
             
-            if 'file_size' not in columns:
-                print("添加 file_size 字段到数据库...")
-                conn.execute(text("ALTER TABLE videos ADD COLUMN file_size BIGINT DEFAULT 0"))
-                conn.commit()
-                print("file_size 字段添加成功")
-                
-                # 为现有记录更新文件大小
-                update_existing_file_sizes()
-                
+            # 执行每个迁移
+            for migration in migrations:
+                field_name = migration['field']
+                if field_name not in existing_columns:
+                    print(f"添加 {migration['description']} ({field_name}) 到数据库...")
+                    try:
+                        conn.execute(text(migration['sql']))
+                        conn.commit()
+                        print(f"{field_name} 字段添加成功")
+                        
+                        # 执行数据更新函数
+                        if migration.get('update_function'):
+                            print(f"开始更新现有记录的 {field_name} 数据...")
+                            migration['update_function']()
+                        
+                    except Exception as e:
+                        print(f"添加字段 {field_name} 时出错: {e}")
+                        conn.rollback()
+                else:
+                    print(f"字段 {field_name} 已存在，跳过迁移")
+                    
     except OperationalError as e:
-        print(f"数据库字段检查/添加时出错: {e}")
+        print(f"数据库迁移时出错: {e}")
 
 def update_existing_file_sizes():
     """为现有记录更新文件大小"""
     import os
     session = Session()
     try:
+        # 查找文件大小为空或为0的记录
         videos_without_size = session.query(Video).filter(
             (Video.file_size == None) | (Video.file_size == 0)
         ).all()
         
+        if not videos_without_size:
+            print("所有记录已有文件大小信息")
+            return
+        
         updated_count = 0
-        for video in videos_without_size:
+        batch_size = 100  # 批量处理，避免内存问题
+        
+        for i, video in enumerate(videos_without_size):
             try:
-                if os.path.exists(video.detail):
+                if video.detail and os.path.exists(video.detail):
                     file_size = os.path.getsize(video.detail)
                     video.file_size = file_size
                     updated_count += 1
-            except (OSError, AttributeError):
+                else:
+                    video.file_size = 0
+                    
+                # 批量提交，提高性能
+                if (i + 1) % batch_size == 0:
+                    session.commit()
+                    print(f"已处理 {i + 1}/{len(videos_without_size)} 条记录")
+                    
+            except (OSError, AttributeError) as e:
+                print(f"处理视频 {video.filename} 时出错: {e}")
                 video.file_size = 0
         
-        if updated_count > 0:
-            session.commit()
-            print(f"已更新 {updated_count} 个视频的文件大小信息")
+        # 提交剩余的更改
+        session.commit()
+        print(f"文件大小更新完成，共更新 {updated_count} 个视频记录")
         
     except Exception as e:
         session.rollback()
         print(f"更新文件大小时出错: {e}")
     finally:
         session.close()
+
+def add_new_field_migration(field_name, sql_statement, update_function=None, description=""):
+    """
+    添加新字段迁移的辅助函数
+    
+    Args:
+        field_name: 字段名
+        sql_statement: SQL语句
+        update_function: 数据更新函数（可选）
+        description: 字段描述
+    """
+    # 这个函数为未来扩展提供便利
+    # 可以动态添加新的字段迁移而不需要修改核心代码
+    pass

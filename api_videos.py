@@ -7,6 +7,75 @@ from data_init import init_data_from_folder,del_videos_path
 from move_files import *
 bp_videos = Blueprint('videos', __name__)
 
+def apply_video_filters(query, request_args):
+    """
+    应用视频过滤条件到查询对象
+    
+    Args:
+        query: SQLAlchemy查询对象
+        request_args: Flask请求参数对象
+    
+    Returns:
+        过滤后的查询对象
+    """
+    score = request_args.get('score')
+    search = request_args.get('search')
+    tags = request_args.get('tags')
+    size = request_args.get('size')
+    
+    # 评分过滤
+    if score and int(score) > 0:
+        query = query.filter(Video.score == int(score))
+    
+    # 标签过滤
+    if tags:
+        for tag in tags.split(','):
+            query = query.filter(Video.tags.like(f"%{tag}%"))
+    
+    # 关键词搜索
+    if search:
+        keywords = search.strip().split()
+        for kw in keywords:
+            query = query.filter(Video.detail.like(f"%{kw}%"))
+    
+    # 文件大小过滤
+    if size:
+        query = apply_size_filter(query, size)
+    
+    return query
+
+def apply_size_filter(query, size_param):
+    """
+    应用文件大小过滤条件
+    
+    Args:
+        query: SQLAlchemy查询对象
+        size_param: 大小参数字符串 (格式: "operator:value" 或 纯数字)
+    
+    Returns:
+        过滤后的查询对象
+    """
+    if ':' in size_param:
+        # 新格式: "operator:value" (例如: "lte:100", "gte:500")
+        operator, value = size_param.split(':', 1)
+        size_mb = int(value)
+        size_bytes = size_mb * 1024 * 1024
+        
+        if operator == 'lte':  # 小于等于
+            query = query.filter(Video.file_size <= size_bytes)
+        elif operator == 'gte':  # 大于等于
+            query = query.filter(Video.file_size >= size_bytes)
+        elif operator == 'eq':   # 等于 (允许±10MB误差)
+            margin = 10 * 1024 * 1024  # 10MB误差
+            query = query.filter(Video.file_size.between(size_bytes - margin, size_bytes + margin))
+    else:
+        # 兼容旧格式：纯数字，默认为小于等于
+        size_mb = int(size_param)
+        size_bytes = size_mb * 1024 * 1024
+        query = query.filter(Video.file_size <= size_bytes)
+    
+    return query
+
 PATHS_FILE = 'video_paths.json'
 
 def load_paths():
@@ -63,52 +132,23 @@ def get_videos():
     """
     session = Session()
     query = session.query(Video)
+    
+    # 获取请求参数
     page = int(request.args.get('page', 1))
     page_size = int(request.args.get('page_size', 5))
-    score = request.args.get('score')
-    search = request.args.get('search')
-    tags = request.args.get('tags')
-    size = request.args.get('size')
     latest = request.args.get('latest')
     stream = request.args.get('stream', 'false').lower() == 'true'
-
-    if int(score)>0:
-        query = query.filter(Video.int(score) == int(int(score)))
-    if tags:
-        for tag in tags.split(','):
-            query = query.filter(Video.tags.like(f"%{tag}%"))
-    if search:
-        keywords = search.strip().split()
-        for kw in keywords:
-            query2 = query.filter(Video.detail.like(f"%{kw}%"))
-            # if query2.count() == 0:
-            #     query2 = session.query(Video).filter(Video.detail.like(f"%{kw}%"))
-            query = query2
-    if size:
-        # 处理增强的大小过滤格式: "operator:value" 或 纯数字(兼容旧格式)
-        if ':' in size:
-            operator, value = size.split(':', 1)
-            size_mb = int(value)
-            size_bytes = size_mb * 1024 * 1024
-            
-            if operator == 'lte':  # 小于等于
-                query = query.filter(Video.file_size <= size_bytes)
-            elif operator == 'gte':  # 大于等于
-                query = query.filter(Video.file_size >= size_bytes)
-            elif operator == 'eq':   # 等于 (允许±10MB误差)
-                margin = 10 * 1024 * 1024  # 10MB误差
-                query = query.filter(Video.file_size.between(size_bytes - margin, size_bytes + margin))
-        else:
-            # 兼容旧格式：纯数字，默认为小于等于
-            size_mb = int(size)
-            size_bytes = size_mb * 1024 * 1024
-            query = query.filter(Video.file_size <= size_bytes)
-                 
+    
+    # 应用过滤条件
+    query = apply_video_filters(query, request.args)
+    
+    # 排序和分页
     query = query.order_by(Video.id.desc())
     if page_size:
         query = query.offset((page-1)*page_size).limit(page_size)
     else:
         query = query.limit(int(latest))
+    
     videos = query.all()
     session.close()
 
@@ -181,49 +221,12 @@ def get_videos_count():
     支持分数、标签、关键词筛选。
     """
     session = Session()
-     
     query = session.query(Video)
-    score = request.args.get('score')
-    search = request.args.get('search')
-    tags = request.args.get('tags')
-    size = request.args.get('size')
-
-    if search:
-        keywords = search.strip().split()
-        for kw in keywords:
-            query2 = query.filter(Video.detail.like(f"%{kw}%"))
-            # if query2.count() == 0:
-            #     query2 = session.query(Video).filter(Video.detail.like(f"%{kw}%"))
-            query = query2
-     
-    if score:
-        query = query.filter(Video.score == int(score))
-    if size:
-        # 处理增强的大小过滤格式: "operator:value" 或 纯数字(兼容旧格式)
-        if ':' in size:
-            operator, value = size.split(':', 1)
-            size_mb = int(value)
-            size_bytes = size_mb * 1024 * 1024
-            
-            if operator == 'lte':  # 小于等于
-                query = query.filter(Video.file_size <= size_bytes)
-            elif operator == 'gte':  # 大于等于
-                query = query.filter(Video.file_size >= size_bytes)
-            elif operator == 'eq':   # 等于 (允许±10MB误差)
-                margin = 10 * 1024 * 1024  # 10MB误差
-                query = query.filter(Video.file_size.between(size_bytes - margin, size_bytes + margin))
-        else:
-            # 兼容旧格式：纯数字，默认为小于等于
-            size_mb = int(size)
-            size_bytes = size_mb * 1024 * 1024
-            query = query.filter(Video.file_size <= size_bytes)
-    # if tags:
-    #     for tag in tags.split(','):
-    #         query = query.filter(Video.tags.like(f"%{tag}%"))
     
-            
+    # 应用过滤条件
+    query = apply_video_filters(query, request.args)
+    
     total = query.count()
-    
     print(f"Total videos count: {total}")
     session.close()
     return jsonify({"total": total})

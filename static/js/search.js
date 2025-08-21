@@ -25,12 +25,57 @@ export class SearchManager {
         // 更新URL参数
         this.updateUrlParams()
         
+        // 显示搜索提示
+        this.showSearchHint()
+        
         await this.loadVideosCallback(false)
         const ms = performance.now() - start
         this.refs.searchTimeMsg.value = '搜索完成，用时 ' + (ms / 1000).toFixed(2) + ' 秒'
         setTimeout(() => {
             this.refs.searchTimeMsg.value = ''
         }, 3000)
+    }
+
+    // 显示搜索提示并自动应用
+    showSearchHint() {
+        const conditions = []
+        if (this.state.searchKeyword) {
+            conditions.push(`关键词: "${this.state.searchKeyword}"`)
+        }
+        if (this.state.searchScore > 0) {
+            conditions.push(`评分: ${this.state.searchScore}分`)
+        }
+        if (this.state.searchSize && this.state.searchSize !== 0) {
+            const [operator, value] = this.state.searchSize.split(':')
+            const operatorText = operator === 'lte' ? '≤' : operator === 'gte' ? '≥' : '='
+            conditions.push(`大小: ${operatorText}${value}MB`)
+        }
+        
+        if (conditions.length > 0) {
+            this.refs.searchTimeMsg.value = `应用筛选条件: ${conditions.join(', ')}`
+        }
+    }
+
+    // 自动应用搜索配置
+    async autoApplySearch() {
+        // 检查是否有搜索条件变化
+        const hasChanges = this.hasSearchChanges()
+        if (hasChanges) {
+            this.refs.searchTimeMsg.value = '检测到搜索条件变化，正在自动应用...'
+            await this.doSearch()
+        }
+    }
+
+    // 检查搜索条件是否有变化
+    hasSearchChanges() {
+        const currentKeyword = this.refs.searchKeyword.value.trim()
+        const currentScore = this.refs.searchScore.value
+        const currentSize = this.refs.sizeValue.value && this.refs.sizeValue.value > 0 
+            ? `${this.refs.sizeOperator.value}:${this.refs.sizeValue.value}` : 0
+
+        return currentKeyword !== this.state.searchKeyword ||
+               currentScore !== this.state.searchScore ||
+               currentSize !== this.state.searchSize
     }
 
     // 更新URL参数
