@@ -23,21 +23,21 @@ def add_video_records_batch(video_list):
     
      
     # 提取所有待添加的文件名
-    filenames_to_add = [item['filename'] for item in video_list]
+    filenames_to_add = [item['detail'] for item in video_list]
     
     # 查询数据库中已存在的文件名
-    existing_filenames = session.query(Video.filename).filter(
-        Video.filename.in_(filenames_to_add)
+    existing_filenames = session.query(Video.detail).filter(
+        Video.detail.in_(filenames_to_add)
     ).all()
-    existing_filenames = {row.filename for row in existing_filenames}  # 转为集合，便于查找
+    existing_filenames = {row.detail for row in existing_filenames}  # 转为集合，便于查找
     
     # 过滤：只添加不存在的
     new_videos = []
     skipped_count = 0
     
     for item in video_list:
-        if item['filename'] in existing_filenames:
-            print(f"视频 {item['filename']} 已存在，跳过添加。")
+        if item['detail'] in existing_filenames:
+            # print(f"视频 {item['filename']} 已存在，跳过添加。")
             skipped_count += 1
         else:
             new_videos.append({
@@ -62,7 +62,7 @@ def add_video_record(filename, tags, score, detail):
     session = Session()
     oldv=session.query(Video).filter(Video.filename == filename) 
     if oldv.count() > 0:
-        print(f"视频 {filename} 已存在，跳过添加。")
+        # print(f"视频 {filename} 已存在，跳过添加。")
         session.close()
         return 1
     video = Video(filename=filename, tags=','.join(tags), score=score, detail=detail)
@@ -102,6 +102,8 @@ def init_data_from_folder(root_folder):
     for dirpath, dirnames, filenames in os.walk(root_folder):
         folder_name = os.path.basename(dirpath)
         for fname in filenames:
+            if '12月新品推特露脸美少女绝顶身材女菩萨是瑞瑞呀新番福利全裸露出各种裸舞非常奈斯_39V_2048.cc-mp4_36 #少女_[h264竖屏_720pvt_30fps]' in fname:
+                pass
             # 跳过隐藏文件或非视频文件（可按需扩展过滤条件）
             if fname.startswith('.'):
                 continue
@@ -120,18 +122,30 @@ def init_data_from_folder(root_folder):
     cnt,error=add_video_records_batch(videos)
     print(f"批量添加视频记录完成，耗时：{time.time() - start_time:.2f}秒")
     print(f"数据初始化完成。共添加视频文件：{cnt}, 跳过已存在的视频：{error}")
-    session = Session()
-    # 获取文件夹下所有视频文件名
-    files = {f['filename'] for f in videos}
-    db_files = {v.filename for v in session.query(Video).filter(Video.detail.like(f'%{root_folder}%')).all()}
     
-    # 删除数据库中不存在的文件
-    for f in db_files:
-        if f not in files:
-            session.query(Video).filter(Video.filename == f, Video.detail.like(f'%{root_folder}%'))\
-                .delete(synchronize_session="fetch")
+    # 获取文件夹下所有视频文件名
+   # 当前文件夹实际存在的文件
+    files = {f['detail'] for f in videos}
+    session = Session()
+    # 数据库记录中的文件
+    db_files = {
+        v.detail
+        for v in session.query(Video).filter(Video.detail.like(f'%{root_folder}%')).all()
+    }
+
+    # 差集：数据库里有但文件夹里没的
+    to_delete = db_files - files
+
+    if to_delete:
+        print(f"删除 {len(to_delete)} 条数据库中多余的视频记录。")
+        session.query(Video).filter(
+            Video.detail.in_(to_delete),
+            Video.detail.like(f'%{root_folder}%')
+        ).delete(synchronize_session="fetch")
+
     session.commit()
     session.close()
+
 
 if __name__ == "__main__":
     # 修改为你的视频根目录路径

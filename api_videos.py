@@ -1,8 +1,10 @@
+import copy
 from flask import Blueprint, request, jsonify, Response, stream_with_context, send_file, abort
 from models import Video, extract_tags, Session
 import os
 import json
 from data_init import init_data_from_folder,del_videos_path
+from move_files import *
 bp_videos = Blueprint('videos', __name__)
 
 PATHS_FILE = 'video_paths.json'
@@ -48,6 +50,7 @@ def index_video_path():
             del_videos_path(path)  # 删除数据
         return jsonify({'success': True})
     else:
+        run_save_star()
         init_data_from_folder(path)
     
     return jsonify({'success': True})
@@ -68,17 +71,17 @@ def get_videos():
     latest = request.args.get('latest')
     stream = request.args.get('stream', 'false').lower() == 'true'
 
-    if score:
-        query = query.filter(Video.score == int(score))
+    if int(score)>0:
+        query = query.filter(Video.int(score) == int(int(score)))
     if tags:
         for tag in tags.split(','):
             query = query.filter(Video.tags.like(f"%{tag}%"))
     if search:
         keywords = search.strip().split()
         for kw in keywords:
-            query2 = query.filter(Video.filename.like(f"%{kw}%"))
-            if query2.count() == 0:
-                query2 = session.query(Video).filter(Video.detail.like(f"%{kw}%"))
+            query2 = query.filter(Video.detail.like(f"%{kw}%"))
+            # if query2.count() == 0:
+            #     query2 = session.query(Video).filter(Video.detail.like(f"%{kw}%"))
             query = query2
                  
     query = query.order_by(Video.id.desc())
@@ -158,20 +161,29 @@ def get_videos_count():
     支持分数、标签、关键词筛选。
     """
     session = Session()
+     
     query = session.query(Video)
     score = request.args.get('score')
     search = request.args.get('search')
     tags = request.args.get('tags')
 
-    if score:
-        query = query.filter(Video.score == int(score))
-    if tags:
-        for tag in tags.split(','):
-            query = query.filter(Video.tags.like(f"%{tag}%"))
     if search:
         keywords = search.strip().split()
         for kw in keywords:
-            query = query.filter(Video.filename.like(f"%{kw}%"))
+            query2 = query.filter(Video.detail.like(f"%{kw}%"))
+            # if query2.count() == 0:
+            #     query2 = session.query(Video).filter(Video.detail.like(f"%{kw}%"))
+            query = query2
+     
+    if score:
+        query = query.filter(Video.score == int(score))
+    # if tags:
+    #     for tag in tags.split(','):
+    #         query = query.filter(Video.tags.like(f"%{tag}%"))
+    
+            
     total = query.count()
+    
+    print(f"Total videos count: {total}")
     session.close()
     return jsonify({"total": total})
