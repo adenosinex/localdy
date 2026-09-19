@@ -181,7 +181,7 @@ def get_videos():
     query = apply_video_filters(query, request.args)
     
     # 排序和分页
-    query = query.order_by(Video.id.desc())
+    query = query.order_by(Video.filename.desc())
     if page_size:
         query = query.offset((page-1)*page_size).limit(page_size)
     else:
