@@ -1,27 +1,40 @@
+/* ============================================================
+   1. 基础重置
+   ============================================================ */
 html,
 body {
     height: 100%;
     margin: 0;
     padding: 0;
+    overflow: hidden;
     background: #000;
+    -webkit-tap-highlight-color: transparent;
 }
 
 #app {
-    height: 100vh;
     width: 100vw;
+    height: 100vh;
     overflow: hidden;
     background: #000;
+    box-sizing: border-box;
 }
 
+/* ============================================================
+   2. 外层容器
+   ============================================================ */
 .main-video {
     height: 100vh;
+    width: 100vw;
+    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    background: #000;
 }
 
 .video-box {
+    position: relative;      /* 让内部绝对定位元素以此为基准 */
     width: 100vw;
     height: 100vh;
     display: flex;
@@ -31,29 +44,25 @@ body {
     background: #000;
 }
 
-.video-title {
-    color: #fff;
-    font-size: 22px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    text-align: center;
-    cursor: pointer;
-}
-
-.video-container {
+/* ★ 播放区（唯一容器，绝对定位基准） */
+.video-wrap {
     position: relative;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #000;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
+/* ============================================================
+   3. 视频元素
+   ============================================================ */
 video {
-    /* 默认样式，可被类覆盖 */
     background: #000;
     border-radius: 0;
-    object-fit: cover;
+    object-fit: contain;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -71,11 +80,207 @@ video {
     z-index: 1;
 }
 
-/* Loading screen styles */
+/* 竖屏视频 */
+.video-portrait {
+    height: auto;
+    width: 44vh;
+    max-height: 100vh;
+}
+
+/* 横屏视频 */
+.video-landscape {
+    height: 60vh;
+    max-width: 95%;
+}
+
+/* ============================================================
+   4. 底部信息条（标题 + 序号）
+   ============================================================ */
+.video-meta {
+    position: absolute;
+    left: 0;
+    right: 72px;             /* 给右侧操作栏留空间 */
+    bottom: 0;
+    padding: 12px 14px 18px;
+    color: #fff;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.65), transparent);
+    pointer-events: none;
+    z-index: 5;
+}
+
+.video-title {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #fff;
+    text-align: left;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+
+.video-index {
+    color: #1989fa;
+    margin-right: 4px;
+    font-weight: 600;
+}
+
+/* ============================================================
+   5. 右侧竖排操作栏（★ 垂直居中）
+   ============================================================ */
+.side-actions {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);   /* ★ 垂直居中 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    z-index: 99;
+}
+
+/* 单个按钮 */
+.side-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #fff;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+.side-btn:disabled {
+    cursor: not-allowed;
+}
+
+/* 圆形图标容器 */
+.side-btn-inner {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: background 0.2s, transform 0.15s;
+}
+.side-btn:active:not(:disabled) .side-btn-inner {
+    transform: scale(0.9);
+}
+
+.side-icon {
+    font-size: 24px;
+    line-height: 1;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.side-count {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- 激活态 ---------- */
+.side-btn-like.is-active .side-btn-inner {
+    background: #fe2c55;
+    box-shadow: 0 0 0 4px rgba(254, 44, 85, 0.2);
+}
+.side-btn-dislike.is-active .side-btn-inner {
+    background: #8a8f99;
+    box-shadow: 0 0 0 4px rgba(138, 143, 153, 0.2);
+}
+
+/* ---------- loading 态 ---------- */
+.side-btn.is-loading .side-btn-inner {
+    opacity: 0.75;
+}
+.side-btn.is-loading .side-icon {
+    opacity: 0.35;
+}
+
+.side-spinner {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: sideSpin 0.7s linear infinite;
+}
+@keyframes sideSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---------- 成功弹跳 ---------- */
+.side-btn.is-burst .side-btn-inner {
+    animation: sideBounce 420ms cubic-bezier(0.28, 1.6, 0.5, 1);
+}
+@keyframes sideBounce {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.28); }
+    55%  { transform: scale(0.92); }
+    100% { transform: scale(1); }
+}
+
+/* ---------- 粒子爆发 ---------- */
+.side-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.side-particles i {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    margin: -3px 0 0 -3px;
+    border-radius: 50%;
+    background: #fe2c55;
+    opacity: 0;
+    animation: sideParticleFly 620ms ease-out forwards;
+}
+.side-btn-dislike .side-particles i {
+    background: #c3c8d0;
+}
+@keyframes sideParticleFly {
+    0% {
+        opacity: 1;
+        transform: rotate(calc(var(--i) * 60deg)) translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: rotate(calc(var(--i) * 60deg)) translateY(-32px) scale(0.3);
+    }
+}
+
+/* ---------- 失败抖动 ---------- */
+.side-btn.is-shake .side-btn-inner {
+    animation: sideShake 400ms;
+}
+@keyframes sideShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
+/* ============================================================
+   6. Loading 首屏
+   ============================================================ */
 .loading-screen {
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100vw;
     height: 100vh;
     background: #000;
@@ -86,44 +291,12 @@ video {
     z-index: 1000;
 }
 
-/* 竖屏视频样式 */
-video {
-    object-fit: contain;
-    height: auto;
-    width: 44vh;
-}
-/* 竖屏视频样式 */
-.video-portrait {
-    height: auto;
-    width: 44vh;
-}
-
-/* 横屏视频样式 */
-.video-landscape {
-    height: 60vh;
-    max-width: 95%;
-}
-
-.van-popup {
-    background: #fff;
-}
-
-.video-actions {
-    z-index: 99;
-    align-items: center;
-    flex-direction: column;
-    position: absolute;
-    right: 30px;
-     
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-}
-
+/* ============================================================
+   7. 搜索与筛选弹窗
+   ============================================================ */
 .search-modal {
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.5);
@@ -136,96 +309,219 @@ video {
 .search-modal-content {
     background: #fff;
     border-radius: 12px;
-    padding: 24px;
+    padding: 20px;
     width: 90vw;
     max-width: 400px;
-    box-shadow: 0 2px 12px #0002;
+    max-height: 86vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
+.search-modal-content h4 {
+    margin: 0 0 14px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* 通用输入框 / 下拉框 */
 .search-input,
 .search-select {
     width: 100%;
-    margin-bottom: 12px;
-    padding: 8px;
-    font-size: 16px;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 14px;
+    color: #333;
+    background: #fff;
+    border: 1px solid #dcdee0;
     border-radius: 6px;
-    border: 1px solid #ccc;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.search-input:focus,
+.search-select:focus {
+    border-color: #1989fa;
 }
 
-.search-btn-confirm,
-.search-btn-cancel {
-    width: 48%;
-    margin: 4px 1%;
-    padding: 10px;
-    font-size: 16px;
-    border-radius: 6px;
+/* 筛选行 */
+.filter-row {
+    display: flex;
+    align-items: center;
+    margin-top: 12px;
+}
+.filter-row-block {
+    display: block;
+}
+.filter-label {
+    flex: 0 0 90px;
+    font-size: 14px;
+    color: #333;
+    line-height: 36px;
+}
+.filter-control {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 下拉框尺寸 */
+.search-select {
+    width: auto;
+    min-width: 90px;
+}
+.size-operator {
+    width: 70px;
+    min-width: 70px;
+}
+.size-input {
+    width: 90px;
+}
+.unit {
+    font-size: 13px;
+    color: #666;
+}
+
+/* 跳转序号 */
+.jump-input {
+    flex: 1;
+}
+.jump-btn {
+    flex: 0 0 auto;
+    height: 36px;
+    padding: 0 16px;
+    font-size: 14px;
+    color: #fff;
+    background: #1989fa;
     border: none;
+    border-radius: 6px;
     cursor: pointer;
 }
-
-.search-btn-confirm {
-    background: #1989fa;
-    color: #fff;
+.jump-btn:active {
+    opacity: 0.85;
 }
 
-.search-btn-cancel {
-    background: #eee;
-    color: #333;
+/* 快捷筛选 */
+.quick-size-wrap {
+    margin-top: 10px;
+    padding-left: 90px;
+    box-sizing: border-box;
 }
-
+.quick-size-label {
+    font-size: 12px;
+    color: #666;
+}
+.quick-size-list {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
 .quick-size-btn {
     display: inline-block;
-    padding: 4px 8px;
-    margin: 2px;
+    padding: 4px 10px;
+    margin: 0;
     font-size: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #f5f5f5;
     color: #333;
+    background: #f5f5f5;
+    border: 1px solid #e5e6eb;
+    border-radius: 14px;
     cursor: pointer;
     transition: all 0.2s;
 }
-
 .quick-size-btn:hover {
     background: #e6f7ff;
     border-color: #1989fa;
     color: #1989fa;
 }
-
 .quick-size-btn.clear-btn {
-    background: #fff2e8;
-    border-color: #ff7875;
     color: #ff4d4f;
+    background: #fff2f0;
+    border-color: #ffccc7;
 }
-
 .quick-size-btn.clear-btn:hover {
     background: #fff1f0;
     border-color: #ff4d4f;
 }
 
-@media (max-width: 600px) {
-    .video-title {
-        font-size: 18px;
-    }
-
-    video {
-        height: 55vh;
-    }
+/* 底部操作按钮 */
+.search-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
 }
-
-
-html,
-body {
-    height: 100%;
+.search-btn-confirm,
+.search-btn-cancel {
+    flex: 1;
+    width: auto;
+    height: 40px;
     margin: 0;
     padding: 0;
-    overflow: hidden;
-    /* 禁止滚动条出现 */
+    font-size: 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.search-btn-confirm {
+    color: #fff;
+    background: #1989fa;
+}
+.search-btn-cancel {
+    color: #333;
+    background: #f2f3f5;
+}
+.search-btn-confirm:active,
+.search-btn-cancel:active {
+    opacity: 0.85;
 }
 
-#app {
-    width: 100vw;
-    height: 100vh;
-    box-sizing: border-box;
-    /* 你可以在这里添加居中、背景色等样式 */
+/* Vant 弹层背景 */
+.van-popup {
+    background: #fff;
+}
+
+/* ============================================================
+   8. 响应式
+   ============================================================ */
+@media (max-width: 600px) {
+    .video-portrait {
+        width: 40vh;
+    }
+
+    /* 右侧操作栏小屏适配（保持垂直居中） */
+    .side-actions {
+        right: 8px;
+        gap: 16px;
+    }
+    .side-btn-inner {
+        width: 42px;
+        height: 42px;
+    }
+    .side-icon {
+        font-size: 22px;
+    }
+
+    /* 底部信息 */
+    .video-meta {
+        right: 64px;
+        padding: 10px 12px 14px;
+    }
+    .video-title {
+        font-size: 14px;
+    }
+
+    /* 搜索弹窗 */
+    .search-modal-content {
+        padding: 16px;
+        width: 92vw;
+    }
+    .filter-label {
+        flex: 0 0 80px;
+    }
+    .quick-size-wrap {
+        padding-left: 80px;
+    }
 }

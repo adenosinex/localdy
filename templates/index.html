@@ -11,33 +11,39 @@
 {% raw %}
 <div id="app">
     <div class="main-video" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
-        <!-- LOGO区域 -->
+
+        <!-- LOGO -->
         <div style="position:absolute;top:18px;left:18px;z-index:10;">
             <a href="http://192.168.31.12:5000" target="_blank">
-
                 <img src="/static/logo.png" alt="LOGO" style="height:40px;">
             </a>
         </div>
-        <!-- 搜索按钮 - 只在加载完成后显示 -->
+
+        <!-- 顶部按钮 -->
         <div v-show="!isLoading" style="position:absolute;top:18px;right:18px;z-index:10;">
             <van-button type="primary" icon="search" size="small" @click="showSearch = true">搜索</van-button>
             <van-button type="default" icon="setting" size="small" style="margin-left:8px;" @click="showConfig = true">配置</van-button>
         </div>
+
         <!-- 加载屏幕 -->
         <div v-if="isLoading" class="loading-screen">
             <img src="/static/logo.png" alt="LOGO" style="height:80px;margin-bottom:30px;">
             <div style="color:#fff;font-size:18px;">加载中...</div>
         </div>
-        
+
         <!-- 视频界面 -->
         <div class="video-box" v-show="!isLoading && state.videos.length">
-            <div v-if="searchTimeMsg" style="position:absolute;top:0;left:0;right:0;background:rgba(0,0,0,0.7);color:#fff;text-align:center;z-index:20;padding:8px;">
+
+            <!-- 搜索耗时提示 -->
+            <div v-if="searchTimeMsg"
+                 style="position:absolute;top:0;left:0;right:0;background:rgba(0,0,0,0.7);color:#fff;text-align:center;z-index:20;padding:8px;">
                 {{ searchTimeMsg }}
             </div>
-            <div class="video-title" @click="toggleDetail">{{ currentVideo.filename }}</div>
-              
-            <!-- 3-video preloading system -->
-            <div class="video-container">
+
+            <!-- ★ 播放区（唯一容器，position: relative） -->
+            <div class="video-wrap">
+
+                <!-- 视频队列（3-video 预加载） -->
                 <video
                     v-for="(video, index) in videoQueue"
                     :key="video.id"
@@ -48,23 +54,82 @@
                     :controls="index === activeVideoIndex"
                     preload="auto"
                     playsinline
+                    webkit-playsinline
                     @ended="nextVideo"
                     @loadeddata="onVideoLoaded(index)"
                     @canplaythrough="onVideoReady(index)"
                 ></video>
+
+                <!-- ★ 右侧竖排操作栏（垂直居中） -->
+                <div class="side-actions">
+                    <!-- 5 分：点赞 -->
+                    <button
+                        class="side-btn side-btn-like"
+                        :class="{
+                            'is-active': currentVideo.score === 5,
+                            'is-loading': likeLoading === 5,
+                            'is-burst': burstScore === 5,
+                            'is-shake': shakeScore === 5
+                        }"
+                        :disabled="likeLoading !== 0"
+                        @click.stop="likeVideo(5)"
+                    >
+                        <span class="side-btn-inner">
+                            <span class="side-icon">👍</span>
+                            <span v-if="likeLoading === 5" class="side-spinner"></span>
+                            <span v-if="burstScore === 5" class="side-particles">
+                                <i v-for="i in 6" :key="i" :style="{ '--i': i }"></i>
+                            </span>
+                        </span>
+                        <span class="side-count">{{ currentVideo.score || 0 }}</span>
+                    </button>
+
+                    <!-- 1 分：踩 -->
+                    <button
+                        class="side-btn side-btn-dislike"
+                        :class="{
+                            'is-active': currentVideo.score === 1,
+                            'is-loading': likeLoading === 1,
+                            'is-burst': burstScore === 1,
+                            'is-shake': shakeScore === 1
+                        }"
+                        :disabled="likeLoading !== 0"
+                        @click.stop="likeVideo(1)"
+                    >
+                        <span class="side-btn-inner">
+                            <span class="side-icon">👎</span>
+                            <span v-if="likeLoading === 1" class="side-spinner"></span>
+                            <span v-if="burstScore === 1" class="side-particles">
+                                <i v-for="i in 6" :key="i" :style="{ '--i': i }"></i>
+                            </span>
+                        </span>
+                        <span class="side-count">1</span>
+                    </button>
+
+                    <!-- 详情 -->
+                    <button class="side-btn" @click.stop="toggleDetail">
+                        <span class="side-btn-inner">
+                            <span class="side-icon">💬</span>
+                        </span>
+                    </button>
+                </div>
+
+                <!-- 底部标题（序号 + 文件名） -->
+                <div class="video-meta">
+                    <div class="video-title" @click="toggleDetail">
+                        <span class="video-index">{{ videoIndexLabel }}</span>{{ currentVideo.filename || currentVideo.title }}
+                    </div>
+                </div>
             </div>
-            <div class="video-actions">
-                <van-button type="warning" size="small" @click="likeVideo(1)">差评</van-button>
-                <van-button type="primary" size="small" @click="prevVideo"  >上一个</van-button>
-                <van-button type="primary" size="small" @click="nextVideo"  >下一个</van-button>
-                <van-button type="warning" size="small" @click="likeVideo(5)">喜欢</van-button>
-            </div>
+            <!-- ★ 播放区结束 -->
+
+            <!-- 详情弹层 -->
             <van-popup v-model:show="showDetail" position="bottom" round>
                 <div style="padding:20px;">
                     <h4>视频详情</h4>
                     <p>文件名: {{ currentVideo.filename }}</p>
                     <p>标签: {{ currentVideo.tags }}</p>
-                    <p>评分: 
+                    <p>评分:
                         <van-rate v-model="currentVideo.score" @change="updateScore" />
                     </p>
                     <p>分类: {{ currentVideo.detail }}</p>
@@ -72,41 +137,56 @@
                 </div>
             </van-popup>
         </div>
+
         <!-- 无视频状态 -->
         <div v-show="!isLoading && !state.videos.length" style="color:#fff;margin-top:40px;text-align:center;">
             <img src="/static/logo.png" alt="LOGO" style="height:60px;margin-bottom:20px;">
             <div>暂无视频</div>
         </div>
-        <!-- 搜索弹窗（原生实现） -->
+
+        <!-- 搜索弹窗 -->
         <div v-if="showSearch" class="search-modal">
             <div class="search-modal-content">
                 <h4>搜索与筛选</h4>
+
                 <input type="text" v-model="searchKeyword" placeholder="输入关键词" class="search-input" @keyup.enter="doSearch" />
-                <div style="margin:10px 0;">
-                    <span>评分筛选：</span>
-                    <select v-model="searchScore" class="search-select">
-                        <option value="0">不限</option>
-                        <option value="1">1分</option>
-                        <option value="2">2分</option>
-                        <option value="3">3分</option>
-                        <option value="4">4分</option>
-                        <option value="5">5分</option>
-                    </select>
+
+                <div class="filter-row">
+                    <span class="filter-label">跳转序号：</span>
+                    <div class="filter-control">
+                        <input type="number" v-model="jumpIndex" placeholder="输入序号" class="search-input jump-input" min="1" @keyup.enter="doJump" />
+                        <button class="jump-btn" @click="doJump">跳转</button>
+                    </div>
                 </div>
-                <div style="margin:10px 0;">
-                    <span>文件大小筛选：</span>
-                    <div style="margin-top:5px;">
-                        <select v-model="sizeOperator" class="search-select" style="width:80px;">
+
+                <div class="filter-row">
+                    <span class="filter-label">评分筛选：</span>
+                    <div class="filter-control">
+                        <select v-model="searchScore" class="search-select">
+                            <option value="0">不限</option>
+                            <option value="1">1分</option>
+                            <option value="2">2分</option>
+                            <option value="3">3分</option>
+                            <option value="4">4分</option>
+                            <option value="5">5分</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-row filter-row-block">
+                    <span class="filter-label">文件大小筛选：</span>
+                    <div class="filter-control">
+                        <select v-model="sizeOperator" class="search-select size-operator">
                             <option value="lte">≤</option>
                             <option value="gte">≥</option>
                             <option value="eq">=</option>
                         </select>
-                        <input type="number" v-model="sizeValue" placeholder="MB" class="search-input" style="width:80px;margin-left:5px;" min="1" max="10000" />
-                        <span style="margin-left:5px;">MB</span>
+                        <input type="number" v-model="sizeValue" placeholder="MB" class="search-input size-input" min="1" max="10000" />
+                        <span class="unit">MB</span>
                     </div>
-                    <div style="margin-top:8px;">
-                        <span style="font-size:12px;color:#666;">快捷筛选：</span>
-                        <div style="margin-top:3px;">
+                    <div class="quick-size-wrap">
+                        <span class="quick-size-label">快捷筛选：</span>
+                        <div class="quick-size-list">
                             <button @click="setQuickSize('lte', 50)" class="quick-size-btn">≤50MB</button>
                             <button @click="setQuickSize('lte', 100)" class="quick-size-btn">≤100MB</button>
                             <button @click="setQuickSize('lte', 200)" class="quick-size-btn">≤200MB</button>
@@ -118,10 +198,14 @@
                         </div>
                     </div>
                 </div>
-                <button class="search-btn-confirm" @click="doSearch">确认搜索</button>
-                <button class="search-btn-cancel" @click="showSearch=false">取消</button>
+
+                <div class="search-actions">
+                    <button class="search-btn-confirm" @click="doSearch">确认搜索</button>
+                    <button class="search-btn-cancel" @click="showSearch=false">取消</button>
+                </div>
             </div>
         </div>
+
         <!-- 配置弹窗 -->
         <div v-show="showConfig" class="search-modal">
             <div class="search-modal-content">
@@ -139,7 +223,6 @@
             </div>
         </div>
     </div>
-      
 </div>
 {% endraw %}
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>

@@ -107,21 +107,59 @@ def add_video_path():
 
 @bp_videos.route('/video-paths/index', methods=['POST'])
 def index_video_path():
-    data = request.get_json()
-    path = data.get('path', '').strip()
-    if not path or not os.path.isdir(path):
-        return jsonify({'error': '路径无效'}), 400
+    data = request.get_json(silent=True) or {}
+    path = (data.get('path') or '').strip()
+
+    # ---------- 1. 参数校验 ----------
+    if not path:
+        return jsonify({'error': '路径不能为空'}), 400
+
+    # 统一路径格式（处理 Windows \\?\ 前缀、末尾斜杠等）
+    normalized = os.path.normpath(path)
+
+    # ---------- 2. 路径不存在：清理数据库残留 ----------
+    if not os.path.isdir(normalized):
+        # 从配置列表里也顺手移除
+        try:
+            paths = load_paths()
+            if normalized in paths:
+                paths.remove(normalized)
+                save_paths(paths)
+        except Exception as e:
+            print(f"[video-paths] 移除配置失败: {e}")
+
+        # 删除数据库中该路径下的所有记录
+        deleted = del_videos_path(normalized)
+        print(f"[video-paths] 路径不存在: {normalized}，已清理 {deleted} 条记录")
+
+        return jsonify({
+            'success': True,
+            'removed': True,
+            'deleted_records': deleted,
+            'message': f'路径不存在，已清理 {deleted} 条残留记录',
+        })
+
+    # ---------- 3. del=1：主动删除 ----------
     if request.args.get('del') == '1':
         paths = load_paths()
-        if path in paths:
-            paths.remove(path)
+        if normalized in paths:
+            paths.remove(normalized)
             save_paths(paths)
-            del_videos_path(path)  # 删除数据
-        return jsonify({'success': True})
-    else:
+        deleted = del_videos_path(normalized)
+        return jsonify({
+            'success': True,
+            'removed': True,
+            'deleted_records': deleted,
+        })
+
+    # ---------- 4. 正常：保存配置 + 初始化 ----------
+    try:
         run_save_star()
-        init_data_from_folder(path)
-    
+        init_data_from_folder(normalized)
+    except Exception as e:
+        print(f"[video-paths] 初始化失败: {e}")
+        return jsonify({'error': f'初始化失败: {e}'}), 500
+
     return jsonify({'success': True})
 
 @bp_videos.route('/videos', methods=['GET'])
@@ -219,14 +257,24 @@ def get_videos_count():
     """
     获取视频总数（用于前端分页和随机页）。
     支持分数、标签、关键词筛选。
+    额外支持 ?key=xxx 按 key 精确/模糊匹配统计。
     """
     session = Session()
     query = session.query(Video)
-    
-    # 应用过滤条件
+
+    # 应用原有过滤条件
     query = apply_video_filters(query, request.args)
-    
+
+    # 额外处理 key 参数
+    key = request.args.get('key') or request.args.get('Key')
+    if key:
+        # 根据你的 Video 模型字段调整：
+        # 例如按标题模糊匹配，或按标签匹配
+        query = query.filter(Video.filename.like(f"%{key}%"))
+        # 如果是按标签匹配：
+        # query = query.filter(Video.tags.any(Tag.name == key))
+
     total = query.count()
-    print(f"Total videos count: {total}")
-    session.close()
-    return jsonify({"total": total})
+    print(f"Total videos count: {total}, key={key}")
+    return jsonify({"total": total, "key": key})
+   
