@@ -5,15 +5,42 @@ import re
 
 DB_PATH = "sqlite:///videos.db"
 Base = declarative_base()
+import re
+import unicodedata
+
+def normalize_text(s: str) -> str:
+    """
+    规范化文本：去掉所有空白、标点、符号，统一小写。
+    例："A 。" -> "a"，"a。" -> "a"，"C++ 教程" -> "c教程"
+    """
+    if not s:
+        return ''
+    out = []
+    for ch in s:
+        # 去掉所有空白（半角空格、全角空格 \u3000、tab、换行等）
+        if ch.isspace():
+            continue
+        
+        out.append(ch)
+    return ''.join(out).lower()
 
 class Video(Base):
     __tablename__ = 'videos'
     id = Column(Integer, primary_key=True)
     filename = Column(String)
+    filename_norm = Column(String, index=True)  # 新增：规范化后的文件名
     detail = Column(String)  # 路径
     tags = Column(String)
     score = Column(Integer)
     file_size = Column(BigInteger, default=0)  # 文件大小，单位：字节
+
+from sqlalchemy import event
+
+@event.listens_for(Video, 'before_insert')
+@event.listens_for(Video, 'before_update')
+def _fill_filename_norm(mapper, connection, target):
+    target.filename_norm = normalize_text(target.filename)
+
 
 def delete_video(video_id):
     """

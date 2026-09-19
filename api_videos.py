@@ -2,6 +2,7 @@ import copy
 from flask import Blueprint, request, jsonify, Response, stream_with_context, send_file, abort
 from models import Video, extract_tags, Session
 import os
+from sqlalchemy import or_
 import json
 from data_init import init_data_from_folder,del_videos_path
 from move_files import *
@@ -36,7 +37,12 @@ def apply_video_filters(query, request_args):
     if search:
         keywords = search.strip().split()
         for kw in keywords:
-            query = query.filter(Video.detail.like(f"%{kw}%"))
+            query = query.filter(
+                 or_(
+            Video.filename_norm.like(f"%{kw}%"),
+            Video.detail.like(f"%{kw}%"),
+        )
+        )
     
     # 文件大小过滤
     if size:
@@ -181,7 +187,7 @@ def get_videos():
     query = apply_video_filters(query, request.args)
     
     # 排序和分页
-    query = query.order_by(Video.filename.desc())
+    query = query.order_by(Video.filename_norm.desc())
     if page_size:
         query = query.offset((page-1)*page_size).limit(page_size)
     else:
@@ -252,29 +258,22 @@ def stream_video_file(video_id):
     # 以流式方式响应视频文件
     return send_file(video_path, mimetype='video/mp4', as_attachment=True)
 
+from sqlalchemy import func
+
 @bp_videos.route('/videos/count', methods=['GET'])
 def get_videos_count():
-    """
-    获取视频总数（用于前端分页和随机页）。
-    支持分数、标签、关键词筛选。
-    额外支持 ?key=xxx 按 key 精确/模糊匹配统计。
-    """
     session = Session()
     query = session.query(Video)
-
-    # 应用原有过滤条件
     query = apply_video_filters(query, request.args)
 
-    # 额外处理 key 参数
     key = request.args.get('key') or request.args.get('Key')
     if key:
-        # 根据你的 Video 模型字段调整：
-        # 例如按标题模糊匹配，或按标签匹配
-        query = query.filter(Video.filename.like(f"%{key}%"))
-        # 如果是按标签匹配：
-        # query = query.filter(Video.tags.any(Tag.name == key))
+        key_norm = normalize_text(key)
+        if key_norm:
+            query = query.filter(Video.filename_norm.like(f"%{key_norm}%"))
 
     total = query.count()
     print(f"Total videos count: {total}, key={key}")
     return jsonify({"total": total, "key": key})
-   
+
+ 

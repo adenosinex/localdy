@@ -104,7 +104,7 @@ createApp({
 
         // ===== 序号 / 总数 / 带序号标题 =====
 
-        // 当前视频在已加载列表中的位置（从 1 开始）
+        // 当前视频在本批已加载列表中的位置（从 1 开始）——保留给模板备用
         const currentVideoIndex = computed(() => {
             const id = currentVideo.value?.id
             if (id !== undefined && id !== null) {
@@ -117,10 +117,10 @@ createApp({
         // 展示用总数：始终以服务端筛选后的绝对总数为基准
         const totalVideos = computed(() => state.totalVideos || 0)
 
-        // 全局视频序号（从 1 开始，覆盖整个数据集）
+        // 当前视频在搜索结果中的序号（从 1 开始，覆盖整个搜索结果集）
         const globalVideoIndex = computed(() => {
             if (!currentVideo.value?.id) return 0
-            return (state.startPage - 1) * state.pageSize + currentVideoIndex.value
+            return (state.startPage - 1) * state.pageSize + currentIndex.value + 1
         })
 
         // 标题前缀，如 "[3/1250] "
